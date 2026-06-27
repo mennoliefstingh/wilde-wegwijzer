@@ -15,17 +15,21 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body {
   width: 100%;
   height: 100%;
+  min-height: 100dvh;
   margin: 0;
   overflow: hidden;
   color: var(--black);
   background: var(--lila);
   overscroll-behavior: none;
+  position: fixed;
+  inset: 0;
 }
 
 button {
@@ -36,6 +40,9 @@ button {
 .app-shell {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100svh;
   overflow: hidden;
   background: var(--lila);
 }
@@ -43,9 +50,13 @@ button {
 .map-viewport {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   cursor: grab;
 }
 
@@ -63,14 +74,21 @@ button {
   left: 0;
   transform-origin: 0 0;
   will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
+.map-world picture,
 #mapImage,
 .area-layer,
 .stage-layer,
 .location-layer {
   position: absolute;
   inset: 0;
+}
+
+.map-world picture {
+  display: block;
 }
 
 #mapImage {
@@ -90,9 +108,7 @@ button {
   stroke: transparent;
   stroke-width: 0;
   stroke-linejoin: round;
-  filter: url("#fuzzy-edge");
   opacity: 0;
-  transition: opacity 160ms ease-out;
   vector-effect: non-scaling-stroke;
 }
 
@@ -135,11 +151,6 @@ button {
   transform: translate(-50%, -50%);
   cursor: pointer;
   pointer-events: auto;
-  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
-}
-
-.area-label.is-active {
-  transform: translate(-50%, -50%) scale(1.04);
 }
 
 .area-label-tab {
@@ -169,12 +180,12 @@ button {
   border-radius: 0 var(--radius) var(--radius) var(--radius);
   color: var(--black);
   background: var(--paper);
-  box-shadow: var(--shadow);
   white-space: pre-line;
 }
 
-.area-label.is-active .area-label-body {
-  box-shadow: 6px 6px 0 0 var(--black);
+.area-label.is-active .area-label-body,
+.area-label.is-active .area-label-tab {
+  background: var(--lila);
 }
 
 .area-label.is-dim-label {
@@ -185,7 +196,6 @@ button {
   border-radius: var(--radius);
   color: var(--white);
   background: var(--black);
-  box-shadow: var(--shadow);
   white-space: pre-line;
 }
 
@@ -546,23 +556,65 @@ button {
 @media (max-width: 720px) {
   .app-header {
     align-items: flex-start;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+
+  .brand {
+    padding: 6px 9px 7px;
+    border-width: 3px;
+  }
+
+  .brand p {
+    font-size: 9px;
+  }
+
+  .brand h1 {
+    font-size: clamp(28px, 10vw, 40px);
   }
 
   .actions {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     align-items: flex-end;
+    justify-content: flex-end;
+    max-width: 178px;
+    gap: 6px;
   }
 
   .ww-btn,
   .ww-btn-solid {
-    min-height: 39px;
-    padding: 6px 11px;
-    font-size: 13px;
+    min-height: 34px;
+    padding: 5px 9px;
+    border-width: 3px;
+    font-size: 12px;
   }
 
   .ww-icon-btn {
-    width: 39px;
-    height: 39px;
+    width: 34px;
+    height: 34px;
+    border-width: 3px;
+    font-size: 18px;
+  }
+
+  .target-icon {
+    width: 16px;
+    height: 16px;
+    border-width: 3px;
+  }
+
+  .zoom-controls {
+    left: max(8px, env(safe-area-inset-left));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+
+  .ww-square {
+    width: 38px;
+    height: 38px;
+    font-size: 23px;
   }
 
   .stage-label {
@@ -575,10 +627,13 @@ button {
     font-size: 12px;
   }
 
-  .info-card {
-    left: 68px;
-    right: 12px;
-    max-width: none;
+  .area-label-body {
+    max-width: 150px;
+  }
+
+  .share-hint {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    font-size: 12px;
   }
 }
 

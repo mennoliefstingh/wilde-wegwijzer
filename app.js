@@ -39,7 +39,10 @@ const state = {
   zoom: 1,
   panX: 0,
   panY: 0,
-  pointer: null,
+  pointers: new Map(),
+  gesture: null,
+  transformFrame: null,
+  activeAreaShape: null,
   locationWatch: null,
   lastLocation: null,
   activeAreaId: null,
@@ -77,6 +80,7 @@ async function init() {
 
 function bindEvents() {
   window.addEventListener("resize", fitMap);
+  window.visualViewport?.addEventListener("resize", fitMap);
   els.viewport.addEventListener("pointerdown", onPointerDown);
   els.viewport.addEventListener("pointermove", onPointerMove);
   els.viewport.addEventListener("pointerup", onPointerUp);
@@ -263,7 +267,11 @@ function fitMap() {
 }
 
 function applyTransform() {
-  els.world.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+  if (state.transformFrame) return;
+  state.transformFrame = requestAnimationFrame(() => {
+    els.world.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+    state.transformFrame = null;
+  });
 }
 
 function zoomAtCenter(factor) {
@@ -295,38 +303,128 @@ function onWheel(event) {
 
 function onPointerDown(event) {
   if (event.target.closest(".area-label, .poi-label")) return;
+  event.preventDefault();
 
-  state.pointer = {
+  state.pointers.set(event.pointerId, {
     id: event.pointerId,
     startClientX: event.clientX,
     startClientY: event.clientY,
-    startPanX: state.panX,
-    startPanY: state.panY,
-  };
+    clientX: event.clientX,
+    clientY: event.clientY,
+  });
+
+  if (state.pointers.size >= 2) {
+    startPinchGesture();
+  } else {
+    startDragGesture(event.pointerId);
+  }
+
   els.viewport.classList.add("is-panning");
   safeSetPointerCapture(els.viewport, event.pointerId);
 }
 
 function onPointerMove(event) {
-  if (!state.pointer || state.pointer.id !== event.pointerId) return;
-  state.panX = state.pointer.startPanX + event.clientX - state.pointer.startClientX;
-  state.panY = state.pointer.startPanY + event.clientY - state.pointer.startClientY;
+  const pointer = state.pointers.get(event.pointerId);
+  if (!pointer) return;
+  event.preventDefault();
+
+  pointer.clientX = event.clientX;
+  pointer.clientY = event.clientY;
+
+  if (state.pointers.size >= 2) {
+    updatePinchGesture();
+  } else if (state.gesture?.type === "drag" && state.gesture.id === event.pointerId) {
+    const dx = event.clientX - state.gesture.startClientX;
+    const dy = event.clientY - state.gesture.startClientY;
+    state.gesture.moved = state.gesture.moved || Math.hypot(dx, dy) > 10;
+    state.panX = state.gesture.startPanX + dx;
+    state.panY = state.gesture.startPanY + dy;
+  }
+
   applyTransform();
 }
 
 function onPointerUp(event) {
-  const pointer = state.pointer;
-  if (state.pointer) safeReleasePointerCapture(els.viewport, event.pointerId);
-  state.pointer = null;
-  els.viewport.classList.remove("is-panning");
+  const gesture = state.gesture;
+  safeReleasePointerCapture(els.viewport, event.pointerId);
 
-  if (state.shareMode === "pin" && pointer && pointer.id === event.pointerId) {
-    const moved = Math.hypot(event.clientX - pointer.startClientX, event.clientY - pointer.startClientY);
-    if (moved < 10) {
+  if (state.shareMode === "pin" && gesture?.type === "drag" && gesture.id === event.pointerId && !gesture.moved) {
       cancelSharePin();
       showShareLink(viewportToWorld(event.clientX, event.clientY));
-    }
   }
+
+  state.pointers.delete(event.pointerId);
+
+  if (state.pointers.size >= 2) {
+    startPinchGesture();
+  } else if (state.pointers.size === 1) {
+    const [remaining] = state.pointers.values();
+    startDragGesture(remaining.id);
+  } else {
+    state.gesture = null;
+    els.viewport.classList.remove("is-panning");
+  }
+}
+
+function startDragGesture(pointerId) {
+  const pointer = state.pointers.get(pointerId);
+  if (!pointer) return;
+  state.gesture = {
+    type: "drag",
+    id: pointerId,
+    startClientX: pointer.clientX,
+    startClientY: pointer.clientY,
+    startPanX: state.panX,
+    startPanY: state.panY,
+    moved: false,
+  };
+}
+
+function startPinchGesture() {
+  const [a, b] = firstTwoPointers();
+  if (!a || !b) return;
+  state.gesture = {
+    type: "pinch",
+    startDistance: pointerDistance(a, b),
+    startMid: pointerMidpoint(a, b),
+    startZoom: state.zoom,
+    startPanX: state.panX,
+    startPanY: state.panY,
+  };
+}
+
+function updatePinchGesture() {
+  if (state.gesture?.type !== "pinch") startPinchGesture();
+  const [a, b] = firstTwoPointers();
+  if (!a || !b || !state.gesture?.startDistance) return;
+
+  const mid = pointerMidpoint(a, b);
+  const nextZoom = clamp(
+    state.gesture.startZoom * (pointerDistance(a, b) / state.gesture.startDistance),
+    fitZoom() * 0.7,
+    12,
+  );
+  const worldX = (state.gesture.startMid.x - state.gesture.startPanX) / state.gesture.startZoom;
+  const worldY = (state.gesture.startMid.y - state.gesture.startPanY) / state.gesture.startZoom;
+  state.zoom = nextZoom;
+  state.panX = mid.x - worldX * nextZoom;
+  state.panY = mid.y - worldY * nextZoom;
+}
+
+function firstTwoPointers() {
+  return Array.from(state.pointers.values()).slice(0, 2);
+}
+
+function pointerDistance(a, b) {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+
+function pointerMidpoint(a, b) {
+  const rect = els.viewport.getBoundingClientRect();
+  return {
+    x: (a.clientX + b.clientX) / 2 - rect.left,
+    y: (a.clientY + b.clientY) / 2 - rect.top,
+  };
 }
 
 function safeSetPointerCapture(element, pointerId) {
@@ -343,39 +441,28 @@ function safeReleasePointerCapture(element, pointerId) {
 
 function renderAreas() {
   els.areaLayer.innerHTML = "";
-  els.areaLayer.append(createFuzzyFilter());
   for (const area of state.areas) {
     if (isPoiArea(area)) {
       renderAreaPoi(area);
       continue;
     }
 
-    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-    polygon.setAttribute("points", area.points.map((point) => `${point.x},${point.y}`).join(" "));
-    polygon.classList.add("area-shape");
-    polygon.classList.add(`is-${area.category}`);
-    polygon.dataset.id = area.id;
-    if (area.dim) polygon.classList.add("is-dim");
-    els.areaLayer.append(polygon);
+    if (area.dim) {
+      els.areaLayer.append(createAreaShape(area));
+    }
 
     if (!area.dim || area.label) renderAreaLabel(area);
   }
 }
 
-function createFuzzyFilter() {
-  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  defs.innerHTML = `
-    <filter id="fuzzy-edge" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="20" result="blur"></feGaussianBlur>
-      <feFlood flood-color="currentColor" flood-opacity="1" result="color"></feFlood>
-      <feComposite in="color" in2="blur" operator="in" result="soft"></feComposite>
-      <feMerge>
-        <feMergeNode in="soft"></feMergeNode>
-        <feMergeNode in="SourceGraphic"></feMergeNode>
-      </feMerge>
-    </filter>
-  `;
-  return defs;
+function createAreaShape(area) {
+  const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+  polygon.setAttribute("points", area.points.map((point) => `${point.x},${point.y}`).join(" "));
+  polygon.classList.add("area-shape");
+  polygon.classList.add(`is-${area.category}`);
+  polygon.dataset.id = area.id;
+  if (area.dim) polygon.classList.add("is-dim");
+  return polygon;
 }
 
 function renderAreaPoi(area) {
@@ -412,10 +499,12 @@ function renderAreaLabel(area) {
   }
   label.style.left = `${center.x}px`;
   label.style.top = `${center.y}px`;
-  label.addEventListener("click", (event) => {
-    event.stopPropagation();
-    setActiveArea(area.id);
-  });
+  if (!area.dim) {
+    label.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setActiveArea(area.id);
+    });
+  }
   els.stageLayer.append(label);
   fitAreaLabelTab(label);
 }
@@ -431,9 +520,16 @@ function fitAreaLabelTab(label) {
 
 function setActiveArea(id) {
   state.activeAreaId = state.activeAreaId === id ? null : id;
-  for (const shape of els.areaLayer.querySelectorAll(".area-shape")) {
-    shape.classList.toggle("is-active", shape.dataset.id === state.activeAreaId);
+  state.activeAreaShape?.remove();
+  state.activeAreaShape = null;
+
+  const activeArea = state.areas.find((area) => area.id === state.activeAreaId);
+  if (activeArea && !activeArea.dim) {
+    state.activeAreaShape = createAreaShape(activeArea);
+    state.activeAreaShape.classList.add("is-active");
+    els.areaLayer.append(state.activeAreaShape);
   }
+
   for (const label of els.stageLayer.querySelectorAll(".area-label")) {
     label.classList.toggle("is-active", label.dataset.id === state.activeAreaId);
   }

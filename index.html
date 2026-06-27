@@ -18,7 +18,10 @@
     <main class="app-shell">
       <section id="viewport" class="map-viewport" aria-label="Wilde Weide kaart">
         <div id="world" class="map-world">
-          <img id="mapImage" src="assets/map.png?v=30cm-areas-20260627" alt="Wilde Weide satellietkaart" draggable="false" />
+          <picture>
+            <source srcset="assets/map.webp?v=30cm-areas-20260627" type="image/webp" />
+            <img id="mapImage" src="assets/map.png?v=30cm-areas-20260627" alt="Wilde Weide satellietkaart" draggable="false" />
+          </picture>
           <svg id="areaLayer" class="area-layer" aria-hidden="true"></svg>
           <div id="stageLayer" class="stage-layer"></div>
           <div id="locationLayer" class="location-layer" aria-hidden="true"></div>
