@@ -405,7 +405,11 @@ function renderAreaLabel(area) {
   const label = document.createElement("div");
   label.className = `area-label${area.dim ? " is-dim-label" : ""}`;
   label.dataset.id = area.id;
-  label.textContent = area.label || area.text || area.title;
+  if (area.dim) {
+    label.textContent = area.label || area.text || area.title;
+  } else {
+    label.innerHTML = `<span class="area-label-tab">Gebied</span><span class="area-label-body">${escapeHtml(area.label || area.text || area.title)}</span>`;
+  }
   label.style.left = `${center.x}px`;
   label.style.top = `${center.y}px`;
   label.addEventListener("click", (event) => {
@@ -413,6 +417,16 @@ function renderAreaLabel(area) {
     setActiveArea(area.id);
   });
   els.stageLayer.append(label);
+  fitAreaLabelTab(label);
+}
+
+function fitAreaLabelTab(label) {
+  const tab = label.querySelector(".area-label-tab");
+  const body = label.querySelector(".area-label-body");
+  if (!tab || !body) return;
+  requestAnimationFrame(() => {
+    body.style.minWidth = `${Math.ceil(tab.offsetWidth * 1.1)}px`;
+  });
 }
 
 function setActiveArea(id) {
