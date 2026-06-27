@@ -250,6 +250,7 @@ button {
   font-weight: 900;
   line-height: 1;
   transform: translate(12px, -50%);
+  white-space: pre-line;
   pointer-events: none;
 }
 
