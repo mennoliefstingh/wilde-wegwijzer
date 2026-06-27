@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#a48dbe" />
+    <title>Wilde Wegwijzer</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%97%BA%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800;9..144,900&family=Schibsted+Grotesk:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="viewport" class="map-viewport" aria-label="Wilde Weide kaart">
+        <div id="world" class="map-world">
+          <img id="mapImage" src="assets/map.png?v=30cm-areas-20260627" alt="Wilde Weide satellietkaart" draggable="false" />
+          <svg id="areaLayer" class="area-layer" aria-hidden="true"></svg>
+          <div id="stageLayer" class="stage-layer"></div>
+          <div id="locationLayer" class="location-layer" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <header class="app-header">
+        <div class="brand">
+          <p>Wilde</p>
+          <h1>Wegwijzer</h1>
+        </div>
+        <nav class="actions" aria-label="Kaartacties">
+          <button id="locateBtn" class="ww-btn-solid" type="button">
+            <span class="target-icon" aria-hidden="true"></span>
+            <span>Waar ben ik?</span>
+          </button>
+          <button id="shareBtn" class="ww-btn" type="button">Locatie delen</button>
+          <button id="infoBtn" class="ww-icon-btn" type="button" aria-label="Info">?</button>
+        </nav>
+      </header>
+
+      <div id="shareHint" class="share-hint" hidden>
+        <span>Tik op de kaart om je pin te plaatsen</span>
+        <button id="shareCancelBtn" type="button">Annuleer</button>
+      </div>
+
+      <div class="zoom-controls" aria-label="Zoom">
+        <button id="zoomInBtn" class="ww-square" type="button" aria-label="Inzoomen">+</button>
+        <button id="zoomOutBtn" class="ww-square" type="button" aria-label="Uitzoomen">−</button>
+      </div>
+
+      <div id="infoModal" class="info-modal" hidden>
+        <button id="infoCloseBtn" class="modal-backdrop" type="button" aria-label="Sluiten"></button>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+          <button id="infoXBtn" class="modal-close" type="button" aria-label="Sluiten">×</button>
+          <h2 id="infoTitle">Info</h2>
+          <p>
+            Niets mis met een weekendje verdwalen, maar om te voorkomen dat ik door het bamboebos het Bamboebos niet meer
+            zie heb ik toch gepoogd de plattegrond van Wilde Weide iets meer met beide benen op de grond (of in ieder
+            geval een sattelietbeeld daarvan) te zetten.
+          </p>
+          <p>
+            De officiële plattegrond is zodanig vibes based dat ik 1. flink wat aannames maar 2. wel echt m'n best heb
+            gedaan. Vragen of opmerkingen? Mail me op
+            <a href="mailto:wildeweide@menno.sh">wildeweide@menno.sh</a>.
+          </p>
+          <p>
+            Persoonlijk blokkenschema maken met je vrienden? Daar maakte Woytek Bode een appje voor:
+            <a href="https://wildeweide.bodebode.nl">wildeweide.bodebode.nl</a>.
+          </p>
+        </section>
+      </div>
+
+      <div id="shareModal" class="info-modal" hidden>
+        <button id="shareCloseBtn" class="modal-backdrop" type="button" aria-label="Sluiten"></button>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+          <button id="shareXBtn" class="modal-close" type="button" aria-label="Sluiten">×</button>
+          <h2 id="shareTitle">Locatie delen</h2>
+          <div id="shareChoices" class="share-choices">
+            <button id="shareMyLocationBtn" class="ww-btn-solid" type="button">Mijn locatie</button>
+            <button id="sharePinBtn" class="ww-btn" type="button">Pin op kaart</button>
+            <label class="share-description">
+              <span>Beschrijving (optioneel)</span>
+              <input id="shareDescription" type="text" maxlength="140" placeholder="Bij de paarse tent, links van de boom..." />
+            </label>
+          </div>
+          <div id="shareResult" class="share-result" hidden>
+            <label for="shareUrl">Deelbare link</label>
+            <input id="shareUrl" type="text" readonly />
+            <button id="copyShareBtn" class="ww-btn-solid" type="button">Kopieer link</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,73 @@
+{
+  "source": "/Users/menno/Downloads/20260619_103746_SVNEO-02_30cm_RD_8bit_RGB_Ens/20260619_103746_SVNEO-02_30cm_RD_8bit_RGB_Ens.tif",
+  "wgs84_corners_lat_lon": {
+    "top_left": [
+      52.678694,
+      5.877768
+    ],
+    "top_right": [
+      52.683271,
+      5.873047
+    ],
+    "bottom_left": [
+      52.682653,
+      5.887893
+    ],
+    "bottom_right": [
+      52.687187,
+      5.883295
+    ]
+  },
+  "rd_corners": {
+    "top_left": [
+      188176.53,
+      521362.84
+    ],
+    "top_right": [
+      187853.83,
+      521869.97
+    ],
+    "bottom_left": [
+      188858.22,
+      521808.06
+    ],
+    "bottom_right": [
+      188543.82,
+      522310.41
+    ]
+  },
+  "source_pixel_corners": {
+    "top_left": [
+      36060.1,
+      17390.866666666505
+    ],
+    "top_right": [
+      34984.43333333329,
+      15700.433333333349
+    ],
+    "bottom_left": [
+      38332.40000000001,
+      15906.79999999993
+    ],
+    "bottom_right": [
+      37284.40000000002,
+      14232.300000000008
+    ]
+  },
+  "source_bbox_pixels": [
+    34944,
+    14192,
+    38373,
+    17431
+  ],
+  "output_size_pixels": [
+    1990,
+    2721
+  ],
+  "pixel_size_meters": [
+    0.3,
+    0.3
+  ],
+  "top_edge_meters": 601.0957718200597,
+  "left_edge_meters": 814.2002852492612
+}

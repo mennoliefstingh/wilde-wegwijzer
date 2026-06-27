@@ -1,0 +1,235 @@
+{
+  "type": "FeatureCollection",
+  "name": "wilde-weide-stages",
+  "source": "/Users/menno/Downloads/wilde-weide-markers.geojson",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.881011288131765,
+          52.6809017405132
+        ]
+      },
+      "properties": {
+        "id": "6ee981d9-d2cc-4d1a-9214-1f054aae0c52",
+        "name": "Strand",
+        "notes": "",
+        "pixelX": 291.0674757294397,
+        "pixelY": 1055.5918491812208,
+        "rdX": 188394.00321900635,
+        "rdY": 521609.75373128767
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.880859383049498,
+          52.68252729358597
+        ]
+      },
+      "properties": {
+        "id": "a5d42ab2-2892-450d-8b3f-d4398c59fdf4",
+        "name": "Kas",
+        "notes": "",
+        "pixelX": 818.0844094692866,
+        "pixelY": 1344.6958557768146,
+        "rdX": 188382.49509517377,
+        "rdY": 521790.5601787138
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.880656763225164,
+          52.68182100684055
+        ]
+      },
+      "properties": {
+        "id": "37fcac21-eea2-451f-9997-a7c9b68f9eb7",
+        "name": "Radio de Koperen Hond & Ambrosia",
+        "notes": "",
+        "pixelX": 621.591410125687,
+        "pixelY": 1167.6774858306248,
+        "rdX": 188369.32993858066,
+        "rdY": 521711.87749119656
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.879117584931586,
+          52.68201942495142
+        ]
+      },
+      "properties": {
+        "id": "e649f832-9f2c-40d2-9943-25ba3a2a2079",
+        "name": "Hutjemutje",
+        "notes": "",
+        "pixelX": 869.8482678892133,
+        "pixelY": 911.9700531745568,
+        "rdX": 188265.09427165258,
+        "rdY": 521733.2460831424
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.8818745401607835,
+          52.682104532676725
+        ]
+      },
+      "properties": {
+        "id": "0b26a7e3-6373-4f75-a147-d51c7e41c825",
+        "name": "Bamboebos",
+        "notes": "",
+        "pixelX": 563.0165624495596,
+        "pixelY": 1456.2150654288414,
+        "rdX": 188451.4649455772,
+        "rdY": 521743.9886063836
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.881800389625163,
+          52.681559428354355
+        ]
+      },
+      "properties": {
+        "id": "69f5cb70-641b-488a-9fe6-86923bebe447",
+        "name": "Verwilderij",
+        "notes": "",
+        "pixelX": 401.41788897632085,
+        "pixelY": 1335.3324033343144,
+        "rdX": 188446.86571194217,
+        "rdY": 521683.30008446716
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.881933896007947,
+          52.680874184926985
+        ]
+      },
+      "properties": {
+        "id": "415b4511-a262-4599-a772-74f92be2047b",
+        "name": "De Baan",
+        "notes": "",
+        "pixelX": 170.8522674413606,
+        "pixelY": 1226.7600291929848,
+        "rdX": 188456.4159418941,
+        "rdY": 521607.1142941524
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.879847748976655,
+          52.68269971940495
+        ]
+      },
+      "properties": {
+        "id": "afceeca9-f21d-4d33-b290-fe2696ec33d0",
+        "name": "Tanker",
+        "notes": "",
+        "pixelX": 994.3961321091818,
+        "pixelY": 1184.85632172994,
+        "rdX": 188313.95467170374,
+        "rdY": 521809.2793495936
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.884093175508098,
+          52.684492957426706
+        ]
+      },
+      "properties": {
+        "id": "bc72fba9-fe78-45dd-ae27-7bb074a110b5",
+        "name": "Vuurtorenstrand",
+        "notes": "",
+        "pixelX": 1042.051584556479,
+        "pixelY": 2348.2542805376224,
+        "rdX": 188599.66974542075,
+        "rdY": 522010.7798451582
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.8835966831556945,
+          52.68505342189601
+        ]
+      },
+      "properties": {
+        "id": "8a853bc8-d31f-44a7-af34-d7bb17a2d542",
+        "name": "Sauna",
+        "notes": "",
+        "pixelX": 1277.4725298796402,
+        "pixelY": 2362.939959840786,
+        "rdX": 188565.66865295934,
+        "rdY": 522072.9125130082
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.881235615306124,
+          52.682977943264646
+        ]
+      },
+      "properties": {
+        "id": "d65a78c0-4e7b-4047-89c5-0782533c628a",
+        "name": "Bud X Lodge",
+        "notes": "",
+        "pixelX": 913.5899089879006,
+        "pixelY": 1504.8996306863526,
+        "rdX": 188407.59424068552,
+        "rdY": 521840.8781988765
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.880456,
+          52.680057
+        ]
+      },
+      "properties": {
+        "id": "4cfc8e23-de32-4ba6-a511-908d57018aa6",
+        "name": "Wildlive",
+        "notes": "",
+        "pixelX": 93.9119459223551,
+        "pixelY": 783.9825790599227,
+        "rdX": 188257.86266840855,
+        "rdY": 521605.65514334396
+      }
+    }
+  ]
+}
