@@ -37,6 +37,7 @@ const state = {
   imageH: 0,
   bounds: null,
   map: null,
+  defaultZoom: null,
   layers: {},
   activeAreaLayer: null,
   activeAreaId: null,
@@ -83,16 +84,20 @@ function initMap() {
     bounceAtZoomLimits: false,
     boxZoom: false,
     crs: Leaflet.CRS.Simple,
+    dragging: true,
     doubleClickZoom: true,
+    fadeAnimation: false,
     inertia: true,
     keyboard: false,
-    maxBounds: state.bounds.pad(0.04),
-    maxBoundsViscosity: 0.85,
+    markerZoomAnimation: false,
+    maxBounds: state.bounds.pad(0.75),
+    maxBoundsViscosity: 0.2,
     maxZoom: 4,
     preferCanvas: true,
-    tap: true,
+    tap: false,
     touchZoom: true,
     wheelPxPerZoomLevel: 90,
+    zoomAnimation: true,
     zoomControl: false,
     zoomDelta: 0.5,
     zoomSnap: 0.25,
@@ -124,8 +129,8 @@ function initMap() {
   state.layers.stages = Leaflet.layerGroup().addTo(state.map);
   state.layers.location = Leaflet.layerGroup().addTo(state.map);
 
-  fitMapToCover();
-  state.map.on("resize", fitMapToCover);
+  fitMapToOverview();
+  state.map.on("resize", fitMapToOverview);
   window.visualViewport?.addEventListener("resize", () => state.map.invalidateSize({ pan: false }));
 }
 
@@ -135,18 +140,24 @@ function createPane(name, zIndex, pointerEvents) {
   pane.style.pointerEvents = pointerEvents;
 }
 
-function fitMapToCover() {
+function fitMapToOverview() {
   requestAnimationFrame(() => {
     if (!state.map || !state.bounds) return;
     state.map.invalidateSize({ pan: false });
-    const coverZoom = state.map.getBoundsZoom(state.bounds, true);
-    state.map.setMinZoom(coverZoom);
+    const overviewZoom = state.map.getBoundsZoom(state.bounds, false, [14, 14]);
+    state.defaultZoom = overviewZoom;
+    state.map.setMinZoom(overviewZoom - 1.25);
     if (!Number.isFinite(state.map.getZoom())) {
-      state.map.setView(state.bounds.getCenter(), coverZoom, { animate: false });
+      state.map.fitBounds(state.bounds, { animate: false, padding: [14, 14] });
       return;
     }
-    if (state.map.getZoom() < coverZoom) state.map.setZoom(coverZoom, { animate: false });
+    if (state.map.getZoom() > overviewZoom && isNearFullMapView()) return;
+    if (state.map.getZoom() < state.map.getMinZoom()) state.map.setZoom(state.map.getMinZoom(), { animate: false });
   });
+}
+
+function isNearFullMapView() {
+  return state.map.getBounds().pad(-0.05).intersects(state.bounds);
 }
 
 function bindEvents() {
@@ -568,7 +579,8 @@ function restoreSharedLocation() {
 
 function centerOn(point) {
   if (!state.map) return;
-  const nextZoom = Math.max(state.map.getZoom(), Math.min(1, state.map.getMinZoom() + 1.6));
+  const targetZoom = Number.isFinite(state.defaultZoom) ? state.defaultZoom + 0.85 : state.map.getMinZoom() + 1.6;
+  const nextZoom = Math.max(state.map.getZoom(), targetZoom);
   state.map.setView(pixelLatLng(point), nextZoom, { animate: true });
 }
 
