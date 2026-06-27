@@ -12,20 +12,13 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800;9..144,900&family=Schibsted+Grotesk:wght@500;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=1.9.4" />
+    <link rel="stylesheet" href="styles.css?v=leaflet-20260627" />
   </head>
   <body>
     <main class="app-shell">
       <section id="viewport" class="map-viewport" aria-label="Wilde Weide kaart">
-        <div id="world" class="map-world">
-          <picture>
-            <source srcset="assets/map.webp?v=30cm-areas-20260627" type="image/webp" />
-            <img id="mapImage" src="assets/map.png?v=30cm-areas-20260627" alt="Wilde Weide satellietkaart" draggable="false" />
-          </picture>
-          <svg id="areaLayer" class="area-layer" aria-hidden="true"></svg>
-          <div id="stageLayer" class="stage-layer"></div>
-          <div id="locationLayer" class="location-layer" aria-hidden="true"></div>
-        </div>
+        <div id="map" class="leaflet-map"></div>
       </section>
 
       <header class="app-header">
@@ -97,6 +90,7 @@
       </div>
     </main>
 
-    <script src="app.js" type="module"></script>
+    <script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
+    <script src="app.js?v=leaflet-20260627" type="module"></script>
   </body>
 </html>

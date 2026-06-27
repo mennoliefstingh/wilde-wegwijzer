@@ -1,12 +1,11 @@
 const ASSET_VERSION = "30cm-areas-20260627";
+const MAP_SCALE_METERS = 0.3;
+
+const Leaflet = window.L;
 
 const els = {
   viewport: document.querySelector("#viewport"),
-  world: document.querySelector("#world"),
-  image: document.querySelector("#mapImage"),
-  areaLayer: document.querySelector("#areaLayer"),
-  stageLayer: document.querySelector("#stageLayer"),
-  locationLayer: document.querySelector("#locationLayer"),
+  map: document.querySelector("#map"),
   locateBtn: document.querySelector("#locateBtn"),
   shareBtn: document.querySelector("#shareBtn"),
   shareHint: document.querySelector("#shareHint"),
@@ -36,56 +35,121 @@ const state = {
   poiAreaThreshold: 0,
   imageW: 0,
   imageH: 0,
-  zoom: 1,
-  panX: 0,
-  panY: 0,
-  pointers: new Map(),
-  gesture: null,
-  transformFrame: null,
-  activeAreaShape: null,
+  bounds: null,
+  map: null,
+  layers: {},
+  activeAreaLayer: null,
+  activeAreaId: null,
+  areaLabelMarkers: new Map(),
   locationWatch: null,
   lastLocation: null,
-  activeAreaId: null,
+  locationDot: null,
+  accuracyCircle: null,
   shareMode: null,
+  shareClickHandler: null,
   sharedPoint: null,
+  sharedMarker: null,
 };
 
 init();
 
 async function init() {
+  if (!Leaflet) throw new Error("Leaflet is niet geladen");
+
   bindEvents();
   const [metadata, stages, areas] = await Promise.all([
     fetchJson(`assets/map.metadata.json?v=${ASSET_VERSION}`),
     fetchJson(`assets/stages.geojson?v=${ASSET_VERSION}`),
     fetchJson(`assets/areas.geojson?v=${ASSET_VERSION}`),
-    waitForImage(els.image),
   ]);
 
   state.metadata = metadata;
+  state.imageW = Number(metadata.output_size_pixels?.[0] || 0);
+  state.imageH = Number(metadata.output_size_pixels?.[1] || 0);
   state.stages = normalizeStages(stages.features || []);
   state.areas = normalizeAreas(areas.features || []);
   state.poiAreaThreshold = poiAreaThreshold(state.areas);
-  state.imageW = els.image.naturalWidth;
-  state.imageH = els.image.naturalHeight;
 
-  els.world.style.width = `${state.imageW}px`;
-  els.world.style.height = `${state.imageH}px`;
-  els.areaLayer.setAttribute("viewBox", `0 0 ${state.imageW} ${state.imageH}`);
-
-  fitMap();
+  initMap();
   renderAreas();
   renderStages();
   restoreSharedLocation();
 }
 
+function initMap() {
+  state.bounds = Leaflet.latLngBounds(pixelLatLng({ x: 0, y: state.imageH }), pixelLatLng({ x: state.imageW, y: 0 }));
+  state.map = Leaflet.map(els.map, {
+    attributionControl: false,
+    bounceAtZoomLimits: false,
+    boxZoom: false,
+    crs: Leaflet.CRS.Simple,
+    doubleClickZoom: true,
+    inertia: true,
+    keyboard: false,
+    maxBounds: state.bounds.pad(0.04),
+    maxBoundsViscosity: 0.85,
+    maxZoom: 4,
+    preferCanvas: true,
+    tap: true,
+    touchZoom: true,
+    wheelPxPerZoomLevel: 90,
+    zoomControl: false,
+    zoomDelta: 0.5,
+    zoomSnap: 0.25,
+  });
+
+  createPane("ww-image-pane", 200, "none");
+  createPane("ww-dim-pane", 320, "none");
+  createPane("ww-active-area-pane", 340, "none");
+  createPane("ww-label-pane", 520, "auto");
+  createPane("ww-location-pane", 650, "auto");
+
+  const image = Leaflet.imageOverlay(`assets/map.webp?v=${ASSET_VERSION}`, state.bounds, {
+    pane: "ww-image-pane",
+    interactive: false,
+  }).addTo(state.map);
+
+  image.once("error", () => {
+    state.map.removeLayer(image);
+    Leaflet.imageOverlay(`assets/map.png?v=${ASSET_VERSION}`, state.bounds, {
+      pane: "ww-image-pane",
+      interactive: false,
+    }).addTo(state.map);
+  });
+
+  state.layers.dim = Leaflet.layerGroup().addTo(state.map);
+  state.layers.active = Leaflet.layerGroup().addTo(state.map);
+  state.layers.labels = Leaflet.layerGroup().addTo(state.map);
+  state.layers.pois = Leaflet.layerGroup().addTo(state.map);
+  state.layers.stages = Leaflet.layerGroup().addTo(state.map);
+  state.layers.location = Leaflet.layerGroup().addTo(state.map);
+
+  fitMapToCover();
+  state.map.on("resize", fitMapToCover);
+  window.visualViewport?.addEventListener("resize", () => state.map.invalidateSize({ pan: false }));
+}
+
+function createPane(name, zIndex, pointerEvents) {
+  const pane = state.map.createPane(name);
+  pane.style.zIndex = String(zIndex);
+  pane.style.pointerEvents = pointerEvents;
+}
+
+function fitMapToCover() {
+  requestAnimationFrame(() => {
+    if (!state.map || !state.bounds) return;
+    state.map.invalidateSize({ pan: false });
+    const coverZoom = state.map.getBoundsZoom(state.bounds, true);
+    state.map.setMinZoom(coverZoom);
+    if (!Number.isFinite(state.map.getZoom())) {
+      state.map.setView(state.bounds.getCenter(), coverZoom, { animate: false });
+      return;
+    }
+    if (state.map.getZoom() < coverZoom) state.map.setZoom(coverZoom, { animate: false });
+  });
+}
+
 function bindEvents() {
-  window.addEventListener("resize", fitMap);
-  window.visualViewport?.addEventListener("resize", fitMap);
-  els.viewport.addEventListener("pointerdown", onPointerDown);
-  els.viewport.addEventListener("pointermove", onPointerMove);
-  els.viewport.addEventListener("pointerup", onPointerUp);
-  els.viewport.addEventListener("pointercancel", onPointerUp);
-  els.viewport.addEventListener("wheel", onWheel, { passive: false });
   els.locateBtn.addEventListener("click", toggleLocation);
   els.shareBtn.addEventListener("click", openShare);
   els.shareCloseBtn.addEventListener("click", closeShare);
@@ -97,8 +161,8 @@ function bindEvents() {
   els.infoBtn.addEventListener("click", openInfo);
   els.infoCloseBtn.addEventListener("click", closeInfo);
   els.infoXBtn.addEventListener("click", closeInfo);
-  els.zoomInBtn.addEventListener("click", () => zoomAtCenter(1.22));
-  els.zoomOutBtn.addEventListener("click", () => zoomAtCenter(1 / 1.22));
+  els.zoomInBtn.addEventListener("click", () => state.map?.zoomIn(0.5));
+  els.zoomOutBtn.addEventListener("click", () => state.map?.zoomOut(0.5));
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeInfo();
@@ -125,12 +189,23 @@ function startSharePin() {
   state.shareMode = "pin";
   els.shareHint.hidden = false;
   els.viewport.classList.add("is-placing-pin");
+  els.map.classList.add("is-placing-pin");
+
+  state.shareClickHandler = (event) => {
+    const point = mapPointFromLatLng(event.latlng);
+    cancelSharePin();
+    showShareLink(point);
+  };
+  state.map.once("click", state.shareClickHandler);
 }
 
 function cancelSharePin() {
+  if (state.shareClickHandler && state.map) state.map.off("click", state.shareClickHandler);
+  state.shareClickHandler = null;
   state.shareMode = null;
   els.shareHint.hidden = true;
   els.viewport.classList.remove("is-placing-pin");
+  els.map.classList.remove("is-placing-pin");
 }
 
 function shareMyLocation() {
@@ -207,14 +282,6 @@ async function fetchJson(url) {
   return response.json();
 }
 
-function waitForImage(image) {
-  if (image.complete && image.naturalWidth) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    image.addEventListener("load", resolve, { once: true });
-    image.addEventListener("error", reject, { once: true });
-  });
-}
-
 function normalizeStages(features) {
   return features
     .map((feature, index) => {
@@ -222,7 +289,6 @@ function normalizeStages(features) {
       const coords = feature.geometry?.coordinates || [];
       return {
         id: props.id || `stage-${index + 1}`,
-        index: index + 1,
         name: props.name || `Plek ${index + 1}`,
         lon: Number(coords[0]),
         lat: Number(coords[1]),
@@ -256,351 +322,126 @@ function normalizeAreas(features) {
     .filter((area) => area.points.length >= 3);
 }
 
-function fitMap() {
-  if (!state.imageW || !state.imageH) return;
-  const rect = els.viewport.getBoundingClientRect();
-  const nextZoom = Math.max(rect.width / state.imageW, rect.height / state.imageH);
-  state.zoom = clamp(nextZoom, 0.18, 8);
-  state.panX = (rect.width - state.imageW * state.zoom) / 2;
-  state.panY = (rect.height - state.imageH * state.zoom) / 2;
-  applyTransform();
-}
-
-function applyTransform() {
-  if (state.transformFrame) return;
-  state.transformFrame = requestAnimationFrame(() => {
-    els.world.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.zoom})`;
-    state.transformFrame = null;
-  });
-}
-
-function zoomAtCenter(factor) {
-  const rect = els.viewport.getBoundingClientRect();
-  zoomAt(rect.width / 2, rect.height / 2, factor);
-}
-
-function zoomAt(viewportX, viewportY, factor) {
-  const oldZoom = state.zoom;
-  const nextZoom = clamp(oldZoom * factor, fitZoom() * 0.7, 12);
-  const worldX = (viewportX - state.panX) / oldZoom;
-  const worldY = (viewportY - state.panY) / oldZoom;
-  state.zoom = nextZoom;
-  state.panX = viewportX - worldX * nextZoom;
-  state.panY = viewportY - worldY * nextZoom;
-  applyTransform();
-}
-
-function fitZoom() {
-  const rect = els.viewport.getBoundingClientRect();
-  return Math.max(rect.width / state.imageW, rect.height / state.imageH);
-}
-
-function onWheel(event) {
-  event.preventDefault();
-  const rect = els.viewport.getBoundingClientRect();
-  zoomAt(event.clientX - rect.left, event.clientY - rect.top, event.deltaY < 0 ? 1.12 : 1 / 1.12);
-}
-
-function onPointerDown(event) {
-  if (event.target.closest(".area-label, .poi-label")) return;
-  event.preventDefault();
-
-  state.pointers.set(event.pointerId, {
-    id: event.pointerId,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
-    clientX: event.clientX,
-    clientY: event.clientY,
-  });
-
-  if (state.pointers.size >= 2) {
-    startPinchGesture();
-  } else {
-    startDragGesture(event.pointerId);
-  }
-
-  els.viewport.classList.add("is-panning");
-  safeSetPointerCapture(els.viewport, event.pointerId);
-}
-
-function onPointerMove(event) {
-  const pointer = state.pointers.get(event.pointerId);
-  if (!pointer) return;
-  event.preventDefault();
-
-  pointer.clientX = event.clientX;
-  pointer.clientY = event.clientY;
-
-  if (state.pointers.size >= 2) {
-    updatePinchGesture();
-  } else if (state.gesture?.type === "drag" && state.gesture.id === event.pointerId) {
-    const dx = event.clientX - state.gesture.startClientX;
-    const dy = event.clientY - state.gesture.startClientY;
-    state.gesture.moved = state.gesture.moved || Math.hypot(dx, dy) > 10;
-    state.panX = state.gesture.startPanX + dx;
-    state.panY = state.gesture.startPanY + dy;
-  }
-
-  applyTransform();
-}
-
-function onPointerUp(event) {
-  const gesture = state.gesture;
-  safeReleasePointerCapture(els.viewport, event.pointerId);
-
-  if (state.shareMode === "pin" && gesture?.type === "drag" && gesture.id === event.pointerId && !gesture.moved) {
-      cancelSharePin();
-      showShareLink(viewportToWorld(event.clientX, event.clientY));
-  }
-
-  state.pointers.delete(event.pointerId);
-
-  if (state.pointers.size >= 2) {
-    startPinchGesture();
-  } else if (state.pointers.size === 1) {
-    const [remaining] = state.pointers.values();
-    startDragGesture(remaining.id);
-  } else {
-    state.gesture = null;
-    els.viewport.classList.remove("is-panning");
-  }
-}
-
-function startDragGesture(pointerId) {
-  const pointer = state.pointers.get(pointerId);
-  if (!pointer) return;
-  state.gesture = {
-    type: "drag",
-    id: pointerId,
-    startClientX: pointer.clientX,
-    startClientY: pointer.clientY,
-    startPanX: state.panX,
-    startPanY: state.panY,
-    moved: false,
-  };
-}
-
-function startPinchGesture() {
-  const [a, b] = firstTwoPointers();
-  if (!a || !b) return;
-  state.gesture = {
-    type: "pinch",
-    startDistance: pointerDistance(a, b),
-    startMid: pointerMidpoint(a, b),
-    startZoom: state.zoom,
-    startPanX: state.panX,
-    startPanY: state.panY,
-  };
-}
-
-function updatePinchGesture() {
-  if (state.gesture?.type !== "pinch") startPinchGesture();
-  const [a, b] = firstTwoPointers();
-  if (!a || !b || !state.gesture?.startDistance) return;
-
-  const mid = pointerMidpoint(a, b);
-  const nextZoom = clamp(
-    state.gesture.startZoom * (pointerDistance(a, b) / state.gesture.startDistance),
-    fitZoom() * 0.7,
-    12,
-  );
-  const worldX = (state.gesture.startMid.x - state.gesture.startPanX) / state.gesture.startZoom;
-  const worldY = (state.gesture.startMid.y - state.gesture.startPanY) / state.gesture.startZoom;
-  state.zoom = nextZoom;
-  state.panX = mid.x - worldX * nextZoom;
-  state.panY = mid.y - worldY * nextZoom;
-}
-
-function firstTwoPointers() {
-  return Array.from(state.pointers.values()).slice(0, 2);
-}
-
-function pointerDistance(a, b) {
-  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-}
-
-function pointerMidpoint(a, b) {
-  const rect = els.viewport.getBoundingClientRect();
-  return {
-    x: (a.clientX + b.clientX) / 2 - rect.left,
-    y: (a.clientY + b.clientY) / 2 - rect.top,
-  };
-}
-
-function safeSetPointerCapture(element, pointerId) {
-  try {
-    element.setPointerCapture?.(pointerId);
-  } catch {}
-}
-
-function safeReleasePointerCapture(element, pointerId) {
-  try {
-    element.releasePointerCapture?.(pointerId);
-  } catch {}
-}
-
 function renderAreas() {
-  els.areaLayer.innerHTML = "";
+  state.layers.dim.clearLayers();
+  state.layers.labels.clearLayers();
+  state.layers.pois.clearLayers();
+  state.areaLabelMarkers.clear();
+
   for (const area of state.areas) {
     if (isPoiArea(area)) {
       renderAreaPoi(area);
       continue;
     }
 
-    if (area.dim) {
-      els.areaLayer.append(createAreaShape(area));
-    }
-
+    if (area.dim) createAreaPolygon(area, "ww-dim-pane", 0.76).addTo(state.layers.dim);
     if (!area.dim || area.label) renderAreaLabel(area);
   }
 }
 
-function createAreaShape(area) {
-  const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-  polygon.setAttribute("points", area.points.map((point) => `${point.x},${point.y}`).join(" "));
-  polygon.classList.add("area-shape");
-  polygon.classList.add(`is-${area.category}`);
-  polygon.dataset.id = area.id;
-  if (area.dim) polygon.classList.add("is-dim");
-  return polygon;
+function createAreaPolygon(area, pane, opacity) {
+  return Leaflet.polygon(area.points.map(pixelLatLng), {
+    className: `area-shape is-${area.category}${area.dim ? " is-dim" : ""}`,
+    color: "transparent",
+    fillColor: areaFill(area),
+    fillOpacity: opacity,
+    interactive: false,
+    pane,
+    stroke: false,
+    weight: 0,
+  });
 }
 
 function renderAreaPoi(area) {
   const center = polygonCenter(area.points);
-  const marker = document.createElement("div");
-  marker.className = `poi-marker is-${area.category}`;
-  marker.textContent = "!";
-  marker.style.left = `${center.x}px`;
-  marker.style.top = `${center.y}px`;
-  marker.addEventListener("click", (event) => {
-    event.stopPropagation();
+  const wide = /blijkt dat niemand/i.test(area.label || area.text || area.title);
+  const label = area.label || area.text || area.title;
+  const marker = Leaflet.marker(pixelLatLng(center), {
+    icon: divIcon(`
+      <span class="poi-marker is-${area.category}">!</span>
+      <strong class="poi-label${wide ? " is-wide" : ""}" data-distance-target>${escapeHtml(label)}</strong>
+    `),
+    pane: "ww-label-pane",
+    riseOnHover: true,
+  }).addTo(state.layers.pois);
+
+  marker.on("click", (event) => {
+    Leaflet.DomEvent.stop(event.originalEvent);
     showPointDistance(marker, center);
   });
-  els.stageLayer.append(marker);
-
-  const label = document.createElement("div");
-  label.className = "poi-label";
-  if (/blijkt dat niemand/i.test(area.label || area.text || area.title)) label.classList.add("is-wide");
-  label.textContent = area.label || area.text || area.title;
-  label.style.left = `${center.x}px`;
-  label.style.top = `${center.y}px`;
-  els.stageLayer.append(label);
 }
 
 function renderAreaLabel(area) {
   const center = polygonCenter(area.points);
-  const label = document.createElement("div");
-  label.className = `area-label${area.dim ? " is-dim-label" : ""}`;
-  label.dataset.id = area.id;
-  if (area.dim) {
-    label.textContent = area.label || area.text || area.title;
-  } else {
-    label.innerHTML = `<span class="area-label-tab">Gebied</span><span class="area-label-body">${escapeHtml(area.label || area.text || area.title)}</span>`;
-  }
-  label.style.left = `${center.x}px`;
-  label.style.top = `${center.y}px`;
+  const labelText = area.label || area.text || area.title;
+  const html = area.dim
+    ? `<span class="area-label is-dim-label">${escapeHtml(labelText)}</span>`
+    : `<button class="area-label" type="button" data-area-id="${escapeHtml(area.id)}">
+        <span class="area-label-tab">Gebied</span>
+        <span class="area-label-body">${escapeHtml(labelText)}</span>
+      </button>`;
+
+  const marker = Leaflet.marker(pixelLatLng(center), {
+    icon: divIcon(html),
+    interactive: !area.dim,
+    pane: "ww-label-pane",
+    riseOnHover: true,
+  }).addTo(state.layers.labels);
+
+  state.areaLabelMarkers.set(area.id, marker);
+
   if (!area.dim) {
-    label.addEventListener("click", (event) => {
-      event.stopPropagation();
+    marker.on("click", (event) => {
+      Leaflet.DomEvent.stop(event.originalEvent);
       setActiveArea(area.id);
     });
   }
-  els.stageLayer.append(label);
-  fitAreaLabelTab(label);
+
+  requestAnimationFrame(() => fitAreaLabelTab(marker));
 }
 
-function fitAreaLabelTab(label) {
-  const tab = label.querySelector(".area-label-tab");
-  const body = label.querySelector(".area-label-body");
+function fitAreaLabelTab(marker) {
+  const element = marker.getElement();
+  const tab = element?.querySelector(".area-label-tab");
+  const body = element?.querySelector(".area-label-body");
   if (!tab || !body) return;
-  requestAnimationFrame(() => {
-    body.style.minWidth = `${Math.ceil(tab.offsetWidth * 1.1)}px`;
-  });
+  body.style.minWidth = `${Math.ceil(tab.offsetWidth * 1.1)}px`;
 }
 
 function setActiveArea(id) {
   state.activeAreaId = state.activeAreaId === id ? null : id;
-  state.activeAreaShape?.remove();
-  state.activeAreaShape = null;
+  state.layers.active.clearLayers();
 
   const activeArea = state.areas.find((area) => area.id === state.activeAreaId);
   if (activeArea && !activeArea.dim) {
-    state.activeAreaShape = createAreaShape(activeArea);
-    state.activeAreaShape.classList.add("is-active");
-    els.areaLayer.append(state.activeAreaShape);
+    state.activeAreaLayer = createAreaPolygon(activeArea, "ww-active-area-pane", 0.72).addTo(state.layers.active);
+  } else {
+    state.activeAreaLayer = null;
   }
 
-  for (const label of els.stageLayer.querySelectorAll(".area-label")) {
-    label.classList.toggle("is-active", label.dataset.id === state.activeAreaId);
+  for (const [areaId, marker] of state.areaLabelMarkers) {
+    marker.getElement()?.querySelector(".area-label")?.classList.toggle("is-active", areaId === state.activeAreaId);
   }
-}
-
-function textLabel(value) {
-  const text = String(value || "").trim();
-  return text && text.toUpperCase() !== "DIM" ? text : "";
-}
-
-function isPoiArea(area) {
-  const value = `${area.title} ${area.text}`.toLowerCase();
-  return value.includes("zweefhut") || value.includes("lun-air") || polygonArea(area.points) <= state.poiAreaThreshold;
-}
-
-function poiAreaThreshold(areas) {
-  const benchmark = areas.find((area) => {
-    const value = `${area.title} ${area.text}`.toLowerCase();
-    return value.includes("wc") && value.includes("douchen");
-  });
-  return benchmark ? polygonArea(benchmark.points) : 0;
-}
-
-function polygonArea(points) {
-  let sum = 0;
-  for (let index = 0; index < points.length; index += 1) {
-    const current = points[index];
-    const next = points[(index + 1) % points.length];
-    sum += current.x * next.y - next.x * current.y;
-  }
-  return Math.abs(sum / 2);
-}
-
-function areaCategory(title, text) {
-  const value = `${title} ${text}`.toLowerCase();
-  if (title.toUpperCase() === "DIM" || text.toUpperCase() === "DIM") return "dim";
-  if (/(campingwinkel|zweefhut|lun-air|wc|kakkerlakkencasino|luchtmixer|recyclepunt|straaljager|ehbo|no tent|vuurtorenstrand|niet wat|iets te doen)/.test(value)) {
-    return "side";
-  }
-  if (/(camping|campers|tenten|vriendenvelden|accommodaties|huisjes)/.test(value)) return "camping";
-  if (value.includes("wildlive")) return "wildlive";
-  if (value.includes("verwilderij")) return "wildlive";
-  return "side";
 }
 
 function renderStages() {
+  state.layers.stages.clearLayers();
   for (const stage of state.stages) {
     const point = stagePoint(stage);
-    const marker = document.createElement("div");
-    marker.className = "stage-marker";
-    marker.style.left = `${point.x}px`;
-    marker.style.top = `${point.y}px`;
-    els.stageLayer.append(marker);
+    const marker = Leaflet.marker(pixelLatLng(point), {
+      icon: divIcon(`
+        <span class="stage-marker"></span>
+        <strong class="stage-label" data-distance-target>${escapeHtml(stage.name)}</strong>
+      `),
+      pane: "ww-label-pane",
+      riseOnHover: true,
+    }).addTo(state.layers.stages);
 
-    const label = document.createElement("div");
-    label.className = "stage-label";
-    label.textContent = stage.name;
-    label.style.left = `${point.x}px`;
-    label.style.top = `${point.y}px`;
-    els.stageLayer.append(label);
+    marker.on("click", (event) => {
+      Leaflet.DomEvent.stop(event.originalEvent);
+      showPointDistance(marker, point);
+    });
   }
-}
-
-function polygonCenter(points) {
-  const sum = points.reduce((acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), { x: 0, y: 0 });
-  return { x: sum.x / points.length, y: sum.y / points.length };
-}
-
-function stagePoint(stage) {
-  if (Number.isFinite(stage.x) && Number.isFinite(stage.y)) return { x: stage.x, y: stage.y };
-  return wgs84ToPixel(stage.lat, stage.lon);
 }
 
 function toggleLocation() {
@@ -636,8 +477,12 @@ function toggleLocation() {
 }
 
 function renderLocation() {
-  els.locationLayer.querySelectorAll(".location-dot").forEach((node) => node.remove());
+  state.locationDot?.remove();
+  state.accuracyCircle?.remove();
+  state.locationDot = null;
+  state.accuracyCircle = null;
   renderSharedPoint();
+
   if (!state.lastLocation || !state.metadata || !state.imageW) return;
 
   const { latitude, longitude, accuracy } = state.lastLocation.coords;
@@ -647,47 +492,66 @@ function renderLocation() {
     return;
   }
 
-  const dot = document.createElement("div");
-  dot.className = "location-dot";
-  dot.style.left = `${point.x}px`;
-  dot.style.top = `${point.y}px`;
-  dot.style.setProperty("--accuracy-radius", `${Math.max(28, accuracy / 0.3)}px`);
-  els.locationLayer.append(dot);
+  state.accuracyCircle = Leaflet.circle(pixelLatLng(point), {
+    className: "location-accuracy",
+    color: "#2778ff",
+    fillColor: "#2778ff",
+    fillOpacity: 0.16,
+    interactive: false,
+    pane: "ww-location-pane",
+    radius: Math.max(28, accuracy / MAP_SCALE_METERS),
+    weight: 2,
+  }).addTo(state.layers.location);
+
+  state.locationDot = Leaflet.marker(pixelLatLng(point), {
+    icon: divIcon('<span class="location-dot"></span>'),
+    interactive: false,
+    pane: "ww-location-pane",
+  }).addTo(state.layers.location);
+
   centerOn(point);
 }
 
 function renderSharedPoint() {
-  els.locationLayer.querySelectorAll(".shared-pin").forEach((node) => node.remove());
-  if (!state.sharedPoint) return;
+  state.sharedMarker?.remove();
+  state.sharedMarker = null;
+  if (!state.sharedPoint || !state.map) return;
 
-  const pin = document.createElement("div");
-  pin.className = "shared-pin";
-  pin.style.left = `${state.sharedPoint.x}px`;
-  pin.style.top = `${state.sharedPoint.y}px`;
-  pin.innerHTML = `<span>📍</span><strong>${escapeHtml(state.sharedPoint.label || "Gedeelde locatie")}</strong>`;
-  pin.addEventListener("click", () => showSharedDistance(pin));
-  els.locationLayer.append(pin);
+  state.sharedMarker = Leaflet.marker(pixelLatLng(state.sharedPoint), {
+    icon: divIcon(`
+      <span class="shared-pin-icon">📍</span>
+      <strong class="shared-pin-label" data-distance-target>${escapeHtml(state.sharedPoint.label || "Gedeelde locatie")}</strong>
+    `, "shared-pin"),
+    pane: "ww-location-pane",
+    riseOnHover: true,
+  }).addTo(state.layers.location);
+
+  state.sharedMarker.on("click", (event) => {
+    Leaflet.DomEvent.stop(event.originalEvent);
+    showSharedDistance();
+  });
 }
 
-function showSharedDistance(pin) {
-  if (state.sharedPoint) showPointDistance(pin, state.sharedPoint);
+function showSharedDistance() {
+  if (state.sharedPoint && state.sharedMarker) showPointDistance(state.sharedMarker, state.sharedPoint);
 }
 
-function showPointDistance(element, point) {
+function showPointDistance(target, point) {
   if (!state.lastLocation) {
-    setDistanceText(element, "Zet je locatie aan voor afstand");
+    setDistanceText(target, "Zet je locatie aan voor afstand");
     return;
   }
 
   const myPoint = wgs84ToPixel(state.lastLocation.coords.latitude, state.lastLocation.coords.longitude);
-  const meters = Math.hypot(myPoint.x - point.x, myPoint.y - point.y) * 0.3;
+  const meters = Math.hypot(myPoint.x - point.x, myPoint.y - point.y) * MAP_SCALE_METERS;
   const minutes = Math.max(1, Math.round((meters / 250) * 60));
-  setDistanceText(element, `${Math.round(meters)} m · ${minutes} min dwalen`);
+  setDistanceText(target, `${Math.round(meters)} m · ${minutes} min dwalen`);
 }
 
-function setDistanceText(element, text) {
-  const target = element.querySelector("strong") || element;
-  target.textContent = text;
+function setDistanceText(target, text) {
+  const element = typeof target.getElement === "function" ? target.getElement() : target;
+  const textTarget = element?.querySelector("[data-distance-target]");
+  if (textTarget) textTarget.textContent = text;
 }
 
 function restoreSharedLocation() {
@@ -703,19 +567,9 @@ function restoreSharedLocation() {
 }
 
 function centerOn(point) {
-  const rect = els.viewport.getBoundingClientRect();
-  state.zoom = Math.max(state.zoom, fitZoom() * 1.6);
-  state.panX = rect.width / 2 - point.x * state.zoom;
-  state.panY = rect.height / 2 - point.y * state.zoom;
-  applyTransform();
-}
-
-function viewportToWorld(clientX, clientY) {
-  const rect = els.viewport.getBoundingClientRect();
-  return {
-    x: (clientX - rect.left - state.panX) / state.zoom,
-    y: (clientY - rect.top - state.panY) / state.zoom,
-  };
+  if (!state.map) return;
+  const nextZoom = Math.max(state.map.getZoom(), Math.min(1, state.map.getMinZoom() + 1.6));
+  state.map.setView(pixelLatLng(point), nextZoom, { animate: true });
 }
 
 function shareUrlForPoint(point) {
@@ -753,6 +607,80 @@ function base64UrlToBytes(value) {
   const padded = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
   const binary = atob(padded);
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function pixelLatLng(point) {
+  return Leaflet.latLng(-point.y, point.x);
+}
+
+function mapPointFromLatLng(latlng) {
+  return { x: latlng.lng, y: -latlng.lat };
+}
+
+function divIcon(html, className = "ww-div-icon") {
+  return Leaflet.divIcon({
+    className,
+    html,
+    iconAnchor: [0, 0],
+    iconSize: [0, 0],
+  });
+}
+
+function textLabel(value) {
+  const text = String(value || "").trim();
+  return text && text.toUpperCase() !== "DIM" ? text : "";
+}
+
+function isPoiArea(area) {
+  const value = `${area.title} ${area.text}`.toLowerCase();
+  return value.includes("zweefhut") || value.includes("lun-air") || polygonArea(area.points) <= state.poiAreaThreshold;
+}
+
+function poiAreaThreshold(areas) {
+  const benchmark = areas.find((area) => {
+    const value = `${area.title} ${area.text}`.toLowerCase();
+    return value.includes("wc") && value.includes("douchen");
+  });
+  return benchmark ? polygonArea(benchmark.points) : 0;
+}
+
+function polygonArea(points) {
+  let sum = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    sum += current.x * next.y - next.x * current.y;
+  }
+  return Math.abs(sum / 2);
+}
+
+function polygonCenter(points) {
+  const sum = points.reduce((acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), { x: 0, y: 0 });
+  return { x: sum.x / points.length, y: sum.y / points.length };
+}
+
+function areaFill(area) {
+  if (area.dim) return "#050505";
+  if (area.category === "camping" || area.category === "wildlive") return "#ddacc0";
+  if (area.category === "side") return "#a3c2cf";
+  return "#fff8df";
+}
+
+function areaCategory(title, text) {
+  const value = `${title} ${text}`.toLowerCase();
+  if (title.toUpperCase() === "DIM" || text.toUpperCase() === "DIM") return "dim";
+  if (/(campingwinkel|zweefhut|lun-air|wc|kakkerlakkencasino|luchtmixer|recyclepunt|straaljager|ehbo|no tent|vuurtorenstrand|niet wat|iets te doen)/.test(value)) {
+    return "side";
+  }
+  if (/(camping|campers|tenten|vriendenvelden|accommodaties|huisjes)/.test(value)) return "camping";
+  if (value.includes("wildlive")) return "wildlive";
+  if (value.includes("verwilderij")) return "wildlive";
+  return "side";
+}
+
+function stagePoint(stage) {
+  if (Number.isFinite(stage.x) && Number.isFinite(stage.y)) return { x: stage.x, y: stage.y };
+  return wgs84ToPixel(stage.lat, stage.lon);
 }
 
 function escapeHtml(value) {
@@ -845,8 +773,4 @@ function polynomial(terms, a, b) {
 
 function insideMap(x, y) {
   return x >= 0 && y >= 0 && x <= state.imageW && y <= state.imageH;
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
 }

@@ -50,6 +50,7 @@ button {
 .map-viewport {
   position: absolute;
   inset: 0;
+  z-index: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -60,82 +61,46 @@ button {
   cursor: grab;
 }
 
-.map-viewport.is-panning {
+.leaflet-map,
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--lila);
+  font-family: inherit;
+}
+
+.leaflet-container {
+  cursor: grab;
+  touch-action: none;
+}
+
+.leaflet-container.leaflet-dragging {
   cursor: grabbing;
 }
 
+.leaflet-container.is-placing-pin,
 .map-viewport.is-placing-pin {
   cursor: crosshair;
 }
 
-.map-world {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: 0 0;
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+.leaflet-image-layer {
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.map-world picture,
-#mapImage,
-.area-layer,
-.stage-layer,
-.location-layer {
-  position: absolute;
-  inset: 0;
+.leaflet-control-container {
+  display: none;
 }
 
-.map-world picture {
-  display: block;
-}
-
-#mapImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.area-layer {
-  overflow: visible;
-  pointer-events: none;
+.ww-div-icon,
+.shared-pin {
+  border: 0;
+  background: transparent;
 }
 
 .area-shape {
-  fill: rgba(255, 248, 223, 0.7);
   stroke: transparent;
   stroke-width: 0;
-  stroke-linejoin: round;
-  opacity: 0;
-  vector-effect: non-scaling-stroke;
-}
-
-.area-shape.is-wildlive,
-.area-shape.is-camping {
-  color: var(--rose);
-  fill: rgba(221, 172, 192, 0.72);
-}
-
-.area-shape.is-side {
-  color: var(--water);
-  fill: rgba(163, 194, 207, 0.72);
-}
-
-.area-shape.is-dim {
-  color: var(--black);
-  fill: rgba(0, 0, 0, 0.72);
-  opacity: 0.82;
-  stroke: transparent;
-}
-
-.area-shape:not(.is-dim):not(.is-active) {
-  opacity: 0;
-}
-
-.area-shape.is-active {
-  opacity: 1;
 }
 
 .area-label {
@@ -144,11 +109,18 @@ button {
   display: inline-grid;
   justify-items: start;
   max-width: 220px;
+  margin: 0;
+  padding: 0;
+  border: 0;
   color: var(--black);
+  background: transparent;
   font-size: 14px;
   font-weight: 800;
   line-height: 1.06;
+  text-align: left;
   transform: translate(-50%, -50%);
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
   pointer-events: auto;
 }
@@ -299,21 +271,7 @@ button {
   transform: translate(-50%, -50%);
 }
 
-.location-dot::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--accuracy-radius, 42px);
-  height: var(--accuracy-radius, 42px);
-  border: 2px solid rgba(39, 120, 255, 0.8);
-  border-radius: 999px;
-  background: rgba(39, 120, 255, 0.16);
-  transform: translate(-50%, -50%);
-}
-
 .shared-pin {
-  position: absolute;
   z-index: 22;
   display: flex;
   align-items: center;
@@ -337,7 +295,7 @@ button {
 
 .app-header {
   position: absolute;
-  z-index: 30;
+  z-index: 1000;
   top: max(12px, env(safe-area-inset-top));
   left: max(12px, env(safe-area-inset-left));
   right: max(12px, env(safe-area-inset-right));
@@ -384,7 +342,7 @@ button {
 
 .share-hint {
   position: absolute;
-  z-index: 42;
+  z-index: 1100;
   left: 50%;
   bottom: max(14px, env(safe-area-inset-bottom));
   display: flex;
@@ -486,7 +444,7 @@ button {
 
 .zoom-controls {
   position: absolute;
-  z-index: 28;
+  z-index: 1000;
   left: max(12px, env(safe-area-inset-left));
   bottom: max(12px, env(safe-area-inset-bottom));
   flex-direction: column;
@@ -643,7 +601,7 @@ button {
 
 .info-modal {
   position: fixed;
-  z-index: 80;
+  z-index: 2000;
   inset: 0;
   display: grid;
   place-items: center;
