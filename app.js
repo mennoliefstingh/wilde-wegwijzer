@@ -90,9 +90,7 @@ function initMap() {
     inertia: true,
     keyboard: false,
     markerZoomAnimation: false,
-    maxBounds: state.bounds.pad(0.75),
-    maxBoundsViscosity: 0.2,
-    maxZoom: 4,
+    minZoom: -8,
     preferCanvas: true,
     tap: false,
     touchZoom: true,
@@ -146,18 +144,11 @@ function fitMapToOverview() {
     state.map.invalidateSize({ pan: false });
     const overviewZoom = state.map.getBoundsZoom(state.bounds, false, [14, 14]);
     state.defaultZoom = overviewZoom;
-    state.map.setMinZoom(overviewZoom - 1.25);
     if (!Number.isFinite(state.map.getZoom())) {
       state.map.fitBounds(state.bounds, { animate: false, padding: [14, 14] });
       return;
     }
-    if (state.map.getZoom() > overviewZoom && isNearFullMapView()) return;
-    if (state.map.getZoom() < state.map.getMinZoom()) state.map.setZoom(state.map.getMinZoom(), { animate: false });
   });
-}
-
-function isNearFullMapView() {
-  return state.map.getBounds().pad(-0.05).intersects(state.bounds);
 }
 
 function bindEvents() {
