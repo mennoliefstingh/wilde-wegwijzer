@@ -472,7 +472,6 @@ function renderStages() {
     marker.className = "stage-marker";
     marker.style.left = `${point.x}px`;
     marker.style.top = `${point.y}px`;
-    marker.innerHTML = `<span>${stage.index}</span>`;
     els.stageLayer.append(marker);
 
     const label = document.createElement("div");
