@@ -114,6 +114,10 @@ button {
   stroke: transparent;
 }
 
+.area-shape:not(.is-dim):not(.is-active) {
+  opacity: 0;
+}
+
 .area-shape.is-active {
   opacity: 1;
 }
