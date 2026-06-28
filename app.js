@@ -1,5 +1,8 @@
 const ASSET_VERSION = "30cm-areas-20260627";
 const MAP_SCALE_METERS = 0.3;
+const DESCRIPTION_MAX_LENGTH = 80;
+const COMPACT_LABEL_LENGTH = 34;
+const MAX_SHARED_PINS = 12;
 
 const Leaflet = window.L;
 
@@ -20,6 +23,9 @@ const els = {
   shareDescription: document.querySelector("#shareDescription"),
   shareUrl: document.querySelector("#shareUrl"),
   copyShareBtn: document.querySelector("#copyShareBtn"),
+  shareWhatsappBtn: document.querySelector("#shareWhatsappBtn"),
+  pinsList: document.querySelector("#pinsList"),
+  filterButtons: Array.from(document.querySelectorAll("[data-filter]")),
   infoBtn: document.querySelector("#infoBtn"),
   infoModal: document.querySelector("#infoModal"),
   infoCloseBtn: document.querySelector("#infoCloseBtn"),
@@ -42,14 +48,21 @@ const state = {
   activeAreaLayer: null,
   activeAreaId: null,
   areaLabelMarkers: new Map(),
+  filters: {
+    stages: true,
+    facilities: false,
+    campings: false,
+    info: false,
+    festival: true,
+  },
   locationWatch: null,
   lastLocation: null,
   locationDot: null,
   accuracyCircle: null,
   shareMode: null,
   shareClickHandler: null,
-  sharedPoint: null,
-  sharedMarker: null,
+  sharedPins: [],
+  sharedMarkers: new Map(),
 };
 
 init();
@@ -72,8 +85,7 @@ async function init() {
   state.poiAreaThreshold = poiAreaThreshold(state.areas);
 
   initMap();
-  renderAreas();
-  renderStages();
+  renderMapFeatures();
   restoreSharedLocation();
 }
 
@@ -94,7 +106,7 @@ function initMap() {
     preferCanvas: true,
     tap: false,
     touchZoom: true,
-    wheelPxPerZoomLevel: 90,
+    wheelPxPerZoomLevel: 36,
     zoomAnimation: true,
     zoomControl: false,
     zoomDelta: 0.5,
@@ -122,10 +134,12 @@ function initMap() {
 
   state.layers.dim = Leaflet.layerGroup().addTo(state.map);
   state.layers.active = Leaflet.layerGroup().addTo(state.map);
-  state.layers.labels = Leaflet.layerGroup().addTo(state.map);
-  state.layers.pois = Leaflet.layerGroup().addTo(state.map);
+  state.layers.facilities = Leaflet.layerGroup().addTo(state.map);
+  state.layers.campings = Leaflet.layerGroup().addTo(state.map);
+  state.layers.info = Leaflet.layerGroup().addTo(state.map);
   state.layers.stages = Leaflet.layerGroup().addTo(state.map);
   state.layers.location = Leaflet.layerGroup().addTo(state.map);
+  state.layers.shared = Leaflet.layerGroup().addTo(state.map);
 
   fitMapToOverview();
   state.map.on("resize", fitMapToOverview);
@@ -160,6 +174,10 @@ function bindEvents() {
   els.shareMyLocationBtn.addEventListener("click", shareMyLocation);
   els.sharePinBtn.addEventListener("click", startSharePin);
   els.copyShareBtn.addEventListener("click", copyShareUrl);
+  els.shareWhatsappBtn.addEventListener("click", sharePinsToWhatsapp);
+  for (const button of els.filterButtons) {
+    button.addEventListener("click", () => toggleFilter(button.dataset.filter));
+  }
   els.infoBtn.addEventListener("click", openInfo);
   els.infoCloseBtn.addEventListener("click", closeInfo);
   els.infoXBtn.addEventListener("click", closeInfo);
@@ -172,18 +190,35 @@ function bindEvents() {
       cancelSharePin();
     }
   });
+  updateFilterButtons();
 }
 
 function openShare() {
   els.shareChoices.hidden = false;
-  els.shareResult.hidden = true;
+  els.shareResult.hidden = state.sharedPins.length === 0;
+  els.pinsList.hidden = state.sharedPins.length === 0;
   els.copyShareBtn.hidden = false;
-  els.shareDescription.value = state.sharedPoint?.label || "";
+  els.shareDescription.value = "";
+  renderPinsList();
+  updateShareUrl();
   els.shareModal.hidden = false;
 }
 
 function closeShare() {
   els.shareModal.hidden = true;
+}
+
+function toggleFilter(name) {
+  if (!Object.prototype.hasOwnProperty.call(state.filters, name)) return;
+  state.filters[name] = !state.filters[name];
+  updateFilterButtons();
+  renderMapFeatures();
+}
+
+function updateFilterButtons() {
+  for (const button of els.filterButtons) {
+    button.classList.toggle("is-active", Boolean(state.filters[button.dataset.filter]));
+  }
 }
 
 function startSharePin() {
@@ -196,7 +231,8 @@ function startSharePin() {
   state.shareClickHandler = (event) => {
     const point = mapPointFromLatLng(event.latlng);
     cancelSharePin();
-    showShareLink(point);
+    addSharedPin(point);
+    els.shareModal.hidden = false;
   };
   state.map.once("click", state.shareClickHandler);
 }
@@ -212,7 +248,7 @@ function cancelSharePin() {
 
 function shareMyLocation() {
   if (state.lastLocation) {
-    showShareLink(wgs84ToPixel(state.lastLocation.coords.latitude, state.lastLocation.coords.longitude));
+    addSharedPin(wgs84ToPixel(state.lastLocation.coords.latitude, state.lastLocation.coords.longitude));
     return;
   }
 
@@ -224,11 +260,11 @@ function shareMyLocation() {
   els.shareMyLocationBtn.textContent = "Zoeken...";
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      els.shareMyLocationBtn.textContent = "Mijn locatie";
-      showShareLink(wgs84ToPixel(position.coords.latitude, position.coords.longitude));
+      els.shareMyLocationBtn.textContent = "Mijn locatie toevoegen";
+      addSharedPin(wgs84ToPixel(position.coords.latitude, position.coords.longitude));
     },
     () => {
-      els.shareMyLocationBtn.textContent = "Mijn locatie";
+      els.shareMyLocationBtn.textContent = "Mijn locatie toevoegen";
       showShareError("Locatie geweigerd");
     },
     { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
@@ -236,24 +272,37 @@ function shareMyLocation() {
 }
 
 function showShareError(message) {
-  els.shareChoices.hidden = true;
+  els.shareChoices.hidden = false;
   els.shareResult.hidden = false;
   els.shareUrl.value = message;
   els.copyShareBtn.hidden = true;
 }
 
-function showShareLink(point) {
+function addSharedPin(point) {
   if (!insideMap(point.x, point.y)) {
     showShareError("Deze locatie valt buiten de kaart");
     return;
   }
 
-  state.sharedPoint = { ...point, label: els.shareDescription.value.trim().slice(0, 140) };
-  renderSharedPoint();
-  els.shareChoices.hidden = true;
+  if (state.sharedPins.length >= MAX_SHARED_PINS) {
+    showShareError(`Max ${MAX_SHARED_PINS} pins per link`);
+    return;
+  }
+
+  state.sharedPins.push({
+    id: `pin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    x: Math.round(point.x * 10) / 10,
+    y: Math.round(point.y * 10) / 10,
+    label: els.shareDescription.value.trim().slice(0, DESCRIPTION_MAX_LENGTH),
+  });
+  els.shareDescription.value = "";
+  renderSharedPins();
+  renderPinsList();
+  els.shareChoices.hidden = false;
   els.shareResult.hidden = false;
+  els.pinsList.hidden = false;
   els.copyShareBtn.hidden = false;
-  els.shareUrl.value = shareUrlForPoint(state.sharedPoint);
+  updateShareUrl();
   els.shareUrl.select();
   els.shareModal.hidden = false;
 }
@@ -268,6 +317,49 @@ async function copyShareUrl() {
   } catch {
     els.shareUrl.select();
   }
+}
+
+async function sharePinsToWhatsapp() {
+  updateShareUrl();
+  const url = els.shareUrl.value;
+  const text = `Pins op Wilde Wegwijzer: ${url}`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Wilde Wegwijzer pins", text, url });
+      return;
+    } catch {}
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+}
+
+function renderPinsList() {
+  els.pinsList.innerHTML = "";
+  if (state.sharedPins.length === 0) {
+    els.pinsList.hidden = true;
+    return;
+  }
+
+  els.pinsList.hidden = false;
+  for (const pin of state.sharedPins) {
+    const row = document.createElement("div");
+    row.className = "pin-row";
+    const label = pin.label || "Pin zonder naam";
+    row.innerHTML = `<span>${escapeHtml(label)}</span><button type="button" aria-label="Pin verwijderen">×</button>`;
+    row.querySelector("button").addEventListener("click", () => removeSharedPin(pin.id));
+    els.pinsList.append(row);
+  }
+}
+
+function removeSharedPin(id) {
+  state.sharedPins = state.sharedPins.filter((pin) => pin.id !== id);
+  renderSharedPins();
+  renderPinsList();
+  updateShareUrl();
+  els.shareResult.hidden = state.sharedPins.length === 0;
+}
+
+function updateShareUrl() {
+  els.shareUrl.value = state.sharedPins.length ? shareUrlForPins(state.sharedPins) : "";
 }
 
 function openInfo() {
@@ -324,20 +416,40 @@ function normalizeAreas(features) {
     .filter((area) => area.points.length >= 3);
 }
 
+function renderMapFeatures() {
+  renderAreas();
+  renderStages();
+}
+
 function renderAreas() {
   state.layers.dim.clearLayers();
-  state.layers.labels.clearLayers();
-  state.layers.pois.clearLayers();
+  state.layers.facilities.clearLayers();
+  state.layers.campings.clearLayers();
+  state.layers.info.clearLayers();
+  state.layers.active.clearLayers();
+  state.activeAreaId = null;
+  state.activeAreaLayer = null;
   state.areaLabelMarkers.clear();
 
   for (const area of state.areas) {
-    if (isPoiArea(area)) {
-      renderAreaPoi(area);
+    const kind = areaKind(area);
+
+    if (area.dim) {
+      if (state.filters.festival) {
+        createAreaPolygon(area, "ww-dim-pane", 0.76).addTo(state.layers.dim);
+        if (area.label) renderAreaLabel(area, state.layers.dim, "dim");
+      }
       continue;
     }
 
-    if (area.dim) createAreaPolygon(area, "ww-dim-pane", 0.76).addTo(state.layers.dim);
-    if (!area.dim || area.label) renderAreaLabel(area);
+    if (!filterVisible(kind)) continue;
+
+    if (isPoiArea(area) || kind === "facility" || kind === "info") {
+      renderAreaPoi(area, layerForKind(kind), kind);
+      continue;
+    }
+
+    renderAreaLabel(area, layerForKind(kind), kind);
   }
 }
 
@@ -354,33 +466,37 @@ function createAreaPolygon(area, pane, opacity) {
   });
 }
 
-function renderAreaPoi(area) {
+function renderAreaPoi(area, layer, kind) {
   const center = polygonCenter(area.points);
   const wide = /blijkt dat niemand/i.test(area.label || area.text || area.title);
   const label = area.label || area.text || area.title;
   const marker = Leaflet.marker(pixelLatLng(center), {
-    icon: divIcon(`
-      <span class="poi-marker is-${area.category}">!</span>
-      <strong class="poi-label${wide ? " is-wide" : ""}" data-distance-target>${escapeHtml(label)}</strong>
-    `),
+    icon: divIcon(pointHtml({
+      markerClass: `poi-marker is-${area.category} is-${kind}`,
+      labelClass: `poi-label${wide ? " is-wide" : ""}`,
+      icon: poiIcon(kind, label),
+      label,
+    })),
     pane: "ww-label-pane",
     riseOnHover: true,
-  }).addTo(state.layers.pois);
+  }).addTo(layer);
+  marker.wwMeta = { point: center, label, compact: compactLabel(label) };
 
   marker.on("click", (event) => {
     Leaflet.DomEvent.stop(event.originalEvent);
-    showPointDistance(marker, center);
+    togglePointMarker(marker);
   });
 }
 
-function renderAreaLabel(area) {
+function renderAreaLabel(area, layer, kind) {
   const center = polygonCenter(area.points);
   const labelText = area.label || area.text || area.title;
+  const compact = compactLabel(labelText, 46);
   const html = area.dim
     ? `<span class="area-label is-dim-label">${escapeHtml(labelText)}</span>`
     : `<button class="area-label" type="button" data-area-id="${escapeHtml(area.id)}">
         <span class="area-label-tab">Gebied</span>
-        <span class="area-label-body">${escapeHtml(labelText)}</span>
+        <span class="area-label-body">${escapeHtml(compact)}</span>
       </button>`;
 
   const marker = Leaflet.marker(pixelLatLng(center), {
@@ -388,7 +504,8 @@ function renderAreaLabel(area) {
     interactive: !area.dim,
     pane: "ww-label-pane",
     riseOnHover: true,
-  }).addTo(state.layers.labels);
+  }).addTo(layer);
+  marker.wwMeta = { label: labelText, compact, kind };
 
   state.areaLabelMarkers.set(area.id, marker);
 
@@ -422,26 +539,34 @@ function setActiveArea(id) {
   }
 
   for (const [areaId, marker] of state.areaLabelMarkers) {
-    marker.getElement()?.querySelector(".area-label")?.classList.toggle("is-active", areaId === state.activeAreaId);
+    const isActive = areaId === state.activeAreaId;
+    const element = marker.getElement();
+    element?.querySelector(".area-label")?.classList.toggle("is-active", isActive);
+    const body = element?.querySelector(".area-label-body");
+    if (body && marker.wwMeta) body.textContent = isActive ? marker.wwMeta.label : marker.wwMeta.compact;
   }
 }
 
 function renderStages() {
   state.layers.stages.clearLayers();
+  if (!state.filters.stages) return;
   for (const stage of state.stages) {
     const point = stagePoint(stage);
     const marker = Leaflet.marker(pixelLatLng(point), {
-      icon: divIcon(`
-        <span class="stage-marker"></span>
-        <strong class="stage-label" data-distance-target>${escapeHtml(stage.name)}</strong>
-      `),
+      icon: divIcon(pointHtml({
+        markerClass: "stage-marker",
+        labelClass: "stage-label",
+        icon: "",
+        label: stage.name,
+      })),
       pane: "ww-label-pane",
       riseOnHover: true,
     }).addTo(state.layers.stages);
+    marker.wwMeta = { point, label: stage.name, compact: compactLabel(stage.name, 28) };
 
     marker.on("click", (event) => {
       Leaflet.DomEvent.stop(event.originalEvent);
-      showPointDistance(marker, point);
+      togglePointMarker(marker);
     });
   }
 }
@@ -483,7 +608,6 @@ function renderLocation() {
   state.accuracyCircle?.remove();
   state.locationDot = null;
   state.accuracyCircle = null;
-  renderSharedPoint();
 
   if (!state.lastLocation || !state.metadata || !state.imageW) return;
 
@@ -514,89 +638,132 @@ function renderLocation() {
   centerOn(point);
 }
 
-function renderSharedPoint() {
-  state.sharedMarker?.remove();
-  state.sharedMarker = null;
-  if (!state.sharedPoint || !state.map) return;
+function renderSharedPins() {
+  state.layers.shared.clearLayers();
+  state.sharedMarkers.clear();
+  if (!state.sharedPins.length || !state.map) return;
 
-  state.sharedMarker = Leaflet.marker(pixelLatLng(state.sharedPoint), {
-    icon: divIcon(`
-      <span class="shared-pin-icon">📍</span>
-      <strong class="shared-pin-label" data-distance-target>${escapeHtml(state.sharedPoint.label || "Gedeelde locatie")}</strong>
-    `, "shared-pin"),
-    pane: "ww-location-pane",
-    riseOnHover: true,
-  }).addTo(state.layers.location);
+  for (const pin of state.sharedPins) {
+    const marker = Leaflet.marker(pixelLatLng(pin), {
+      icon: divIcon(pointHtml({
+        markerClass: "shared-pin-icon",
+        labelClass: "shared-pin-label",
+        icon: "📍",
+        label: pin.label || "Gedeelde pin",
+      }), "shared-pin"),
+      pane: "ww-location-pane",
+      riseOnHover: true,
+    }).addTo(state.layers.shared);
+    marker.wwMeta = { point: pin, label: pin.label || "Gedeelde pin", compact: compactLabel(pin.label || "Gedeelde pin", 28) };
+    state.sharedMarkers.set(pin.id, marker);
 
-  state.sharedMarker.on("click", (event) => {
-    Leaflet.DomEvent.stop(event.originalEvent);
-    showSharedDistance();
-  });
-}
-
-function showSharedDistance() {
-  if (state.sharedPoint && state.sharedMarker) showPointDistance(state.sharedMarker, state.sharedPoint);
-}
-
-function showPointDistance(target, point) {
-  if (!state.lastLocation) {
-    setDistanceText(target, "Zet je locatie aan voor afstand");
-    return;
+    marker.on("click", (event) => {
+      Leaflet.DomEvent.stop(event.originalEvent);
+      togglePointMarker(marker);
+    });
   }
+}
 
+function togglePointMarker(marker) {
+  const element = marker.getElement();
+  const meta = marker.wwMeta;
+  if (!element || !meta) return;
+  const expanded = !element.classList.contains("is-expanded");
+  element.classList.toggle("is-expanded", expanded);
+
+  const label = element.querySelector("[data-label-text]");
+  if (label) label.textContent = expanded ? meta.label : meta.compact;
+
+  const distance = element.querySelector("[data-distance]");
+  if (distance) distance.textContent = expanded ? distanceText(meta.point) : "";
+}
+
+function distanceText(point) {
+  if (!state.lastLocation) return "Zet je locatie aan voor afstand";
   const myPoint = wgs84ToPixel(state.lastLocation.coords.latitude, state.lastLocation.coords.longitude);
   const meters = Math.hypot(myPoint.x - point.x, myPoint.y - point.y) * MAP_SCALE_METERS;
   const minutes = Math.max(1, Math.round((meters / 250) * 60));
-  setDistanceText(target, `${Math.round(meters)} m · ${minutes} min dwalen`);
-}
-
-function setDistanceText(target, text) {
-  const element = typeof target.getElement === "function" ? target.getElement() : target;
-  const textTarget = element?.querySelector("[data-distance-target]");
-  if (textTarget) textTarget.textContent = text;
+  return `${Math.round(meters)} m · ${minutes} min dwalen`;
 }
 
 function restoreSharedLocation() {
   const params = new URLSearchParams(window.location.search);
-  const encoded = params.get("loc");
-  if (!encoded) return;
+  const pinsParam = params.get("pins");
+  if (pinsParam) {
+    state.sharedPins = pinsFromShareParam(pinsParam);
+  } else {
+    state.sharedPins = params
+      .getAll("loc")
+      .map(pointFromShareParam)
+      .filter((point) => point && insideMap(point.x, point.y))
+      .map((point, index) => ({ ...point, id: `shared-${index + 1}` }));
+  }
 
-  const point = pointFromShareParam(encoded);
-  if (!point || !insideMap(point.x, point.y)) return;
-  state.sharedPoint = point;
-  renderSharedPoint();
-  centerOn(point);
+  if (!state.sharedPins.length) return;
+  renderSharedPins();
+  focusSharedPins();
 }
 
-function centerOn(point) {
+function centerOn(point, zoomBoost = 0.85) {
   if (!state.map) return;
-  const targetZoom = Number.isFinite(state.defaultZoom) ? state.defaultZoom + 0.85 : state.map.getMinZoom() + 1.6;
+  const targetZoom = Number.isFinite(state.defaultZoom) ? state.defaultZoom + zoomBoost : state.map.getMinZoom() + 1.6;
   const nextZoom = Math.max(state.map.getZoom(), targetZoom);
   state.map.setView(pixelLatLng(point), nextZoom, { animate: true });
 }
 
-function shareUrlForPoint(point) {
+function focusSharedPins() {
+  if (state.sharedPins.length === 1) {
+    centerOn(state.sharedPins[0], 1.9);
+    return;
+  }
+
+  const bounds = Leaflet.latLngBounds(state.sharedPins.map(pixelLatLng));
+  state.map.fitBounds(bounds, { animate: true, maxZoom: Number.isFinite(state.defaultZoom) ? state.defaultZoom + 1.6 : 2, padding: [72, 72] });
+}
+
+function shareUrlForPins(pins) {
   const url = new URL("/share", window.location.origin);
-  url.searchParams.set("loc", shareParamForPoint(point));
+  url.searchParams.set("pins", shareParamForPins(pins));
   return url.toString();
 }
 
-function shareParamForPoint(point) {
+function shareParamForPins(pins) {
   const payload = {
-    x: Math.round(point.x * 10) / 10,
-    y: Math.round(point.y * 10) / 10,
+    v: 1,
+    p: pins.slice(0, MAX_SHARED_PINS).map((pin) => ({
+      x: Math.round(pin.x * 10) / 10,
+      y: Math.round(pin.y * 10) / 10,
+      ...(pin.label ? { t: pin.label.slice(0, DESCRIPTION_MAX_LENGTH) } : {}),
+    })),
   };
-  if (point.label) payload.t = point.label.slice(0, 140);
   return bytesToBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
 }
 
 function pointFromShareParam(value) {
   try {
     const data = JSON.parse(new TextDecoder().decode(base64UrlToBytes(value)));
-    const point = { x: Number(data.x), y: Number(data.y), label: String(data.t || "").slice(0, 140) };
+    const point = { x: Number(data.x), y: Number(data.y), label: String(data.t || "").slice(0, DESCRIPTION_MAX_LENGTH) };
     return Number.isFinite(point.x) && Number.isFinite(point.y) ? point : null;
   } catch {
     return null;
+  }
+}
+
+function pinsFromShareParam(value) {
+  try {
+    const data = JSON.parse(new TextDecoder().decode(base64UrlToBytes(value)));
+    const rawPins = Array.isArray(data.p) ? data.p : [];
+    return rawPins
+      .slice(0, MAX_SHARED_PINS)
+      .map((pin, index) => ({
+        id: `shared-${index + 1}`,
+        x: Number(pin.x),
+        y: Number(pin.y),
+        label: String(pin.t || "").slice(0, DESCRIPTION_MAX_LENGTH),
+      }))
+      .filter((pin) => Number.isFinite(pin.x) && Number.isFinite(pin.y) && insideMap(pin.x, pin.y));
+  } catch {
+    return [];
   }
 }
 
@@ -634,9 +801,40 @@ function textLabel(value) {
   return text && text.toUpperCase() !== "DIM" ? text : "";
 }
 
+function filterVisible(kind) {
+  if (kind === "stage") return state.filters.stages;
+  if (kind === "facility") return state.filters.facilities;
+  if (kind === "camping") return state.filters.campings;
+  if (kind === "info") return state.filters.info;
+  return true;
+}
+
+function layerForKind(kind) {
+  if (kind === "camping") return state.layers.campings;
+  if (kind === "info") return state.layers.info;
+  return state.layers.facilities;
+}
+
+function areaKind(area) {
+  const value = `${area.title} ${area.text}`.toLowerCase();
+  if (area.dim) return "dim";
+  if (area.title.toUpperCase() === "INFO") return "info";
+  if (/(brandnetel|marktplaats|niemand zat te wachten|precies die camping|ik gok|hier ook niet|niet wat|no tent left behind)/.test(value)) return "info";
+  if (/(camping|campers|tenten|vriendenvelden|accommodaties|huisjes)/.test(value)) return "camping";
+  return "facility";
+}
+
 function isPoiArea(area) {
   const value = `${area.title} ${area.text}`.toLowerCase();
-  return value.includes("zweefhut") || value.includes("lun-air") || polygonArea(area.points) <= state.poiAreaThreshold;
+  return (
+    value.includes("zweefhut") ||
+    value.includes("lun-air") ||
+    value.includes("luchtmixer") ||
+    value.includes("helicopter") ||
+    value.includes("helicopteeer") ||
+    value.includes("straaljager") ||
+    polygonArea(area.points) <= state.poiAreaThreshold
+  );
 }
 
 function poiAreaThreshold(areas) {
@@ -660,6 +858,34 @@ function polygonArea(points) {
 function polygonCenter(points) {
   const sum = points.reduce((acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), { x: 0, y: 0 });
   return { x: sum.x / points.length, y: sum.y / points.length };
+}
+
+function pointHtml({ markerClass, labelClass, icon, label }) {
+  const compact = compactLabel(label);
+  return `
+    <span class="${markerClass}">${escapeHtml(icon)}</span>
+    <strong class="${labelClass}" data-label>
+      <span data-label-text>${escapeHtml(compact)}</span>
+      <small class="distance-line" data-distance></small>
+    </strong>
+  `;
+}
+
+function compactLabel(value, maxLength = COMPACT_LABEL_LENGTH) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text || "Pin";
+  return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function poiIcon(kind, label) {
+  const value = String(label || "").toLowerCase();
+  if (kind === "info") return "!";
+  if (value.includes("wc")) return "WC";
+  if (value.includes("eten")) return "E";
+  if (value.includes("ehbo")) return "+";
+  if (value.includes("lucht") || value.includes("helic")) return "🚁";
+  if (value.includes("straaljager")) return "✈";
+  return "!";
 }
 
 function areaFill(area) {

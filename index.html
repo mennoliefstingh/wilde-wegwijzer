@@ -13,7 +13,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="styles.css?v=leaflet-overview-20260627" />
+    <link rel="stylesheet" href="styles.css?v=filters-pins-20260628" />
   </head>
   <body>
     <main class="app-shell">
@@ -31,10 +31,18 @@
             <span class="target-icon" aria-hidden="true"></span>
             <span>Waar ben ik?</span>
           </button>
-          <button id="shareBtn" class="ww-btn" type="button">Locatie delen</button>
+          <button id="shareBtn" class="ww-btn" type="button">Pins</button>
           <button id="infoBtn" class="ww-icon-btn" type="button" aria-label="Info">?</button>
         </nav>
       </header>
+
+      <div class="filter-bar" aria-label="Kaartfilters">
+        <button class="filter-chip is-active" type="button" data-filter="stages">Podia</button>
+        <button class="filter-chip" type="button" data-filter="facilities">Faciliteiten</button>
+        <button class="filter-chip" type="button" data-filter="campings">Campings</button>
+        <button class="filter-chip" type="button" data-filter="info">Info</button>
+        <button class="filter-chip is-active" type="button" data-filter="festival">Alleen festivalterrein</button>
+      </div>
 
       <div id="shareHint" class="share-hint" hidden>
         <span>Tik op de kaart om je pin te plaatsen</span>
@@ -72,25 +80,27 @@
         <button id="shareCloseBtn" class="modal-backdrop" type="button" aria-label="Sluiten"></button>
         <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
           <button id="shareXBtn" class="modal-close" type="button" aria-label="Sluiten">×</button>
-          <h2 id="shareTitle">Locatie delen</h2>
+          <h2 id="shareTitle">Pins delen</h2>
           <div id="shareChoices" class="share-choices">
-            <button id="shareMyLocationBtn" class="ww-btn-solid" type="button">Mijn locatie</button>
-            <button id="sharePinBtn" class="ww-btn" type="button">Pin op kaart</button>
+            <button id="shareMyLocationBtn" class="ww-btn-solid" type="button">Mijn locatie toevoegen</button>
+            <button id="sharePinBtn" class="ww-btn" type="button">Pin toevoegen</button>
             <label class="share-description">
               <span>Beschrijving (optioneel)</span>
-              <input id="shareDescription" type="text" maxlength="140" placeholder="Bij de paarse tent, links van de boom..." />
+              <input id="shareDescription" type="text" maxlength="80" placeholder="Bij de paarse tent, links van de boom..." />
             </label>
           </div>
+          <div id="pinsList" class="pins-list" hidden></div>
           <div id="shareResult" class="share-result" hidden>
             <label for="shareUrl">Deelbare link</label>
             <input id="shareUrl" type="text" readonly />
             <button id="copyShareBtn" class="ww-btn-solid" type="button">Kopieer link</button>
+            <button id="shareWhatsappBtn" class="ww-btn" type="button">Deel via WhatsApp</button>
           </div>
         </section>
       </div>
     </main>
 
     <script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
-    <script src="app.js?v=leaflet-freezoom-20260627" type="module"></script>
+    <script src="app.js?v=filters-pins-20260628" type="module"></script>
   </body>
 </html>

@@ -98,6 +98,10 @@ button {
   background: transparent;
 }
 
+.ww-div-icon {
+  pointer-events: auto;
+}
+
 .area-shape {
   stroke: transparent;
   stroke-width: 0;
@@ -152,12 +156,20 @@ button {
   border-radius: 0 var(--radius) var(--radius) var(--radius);
   color: var(--black);
   background: var(--paper);
-  white-space: pre-line;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .area-label.is-active .area-label-body,
 .area-label.is-active .area-label-tab {
   background: var(--lila);
+}
+
+.area-label.is-active .area-label-body {
+  max-width: 240px;
+  white-space: pre-line;
+  overflow: visible;
 }
 
 .area-label.is-dim-label {
@@ -233,12 +245,20 @@ button {
   font-weight: 900;
   line-height: 1.05;
   transform: translate(14px, -50%);
-  white-space: pre-line;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
 }
 
 .poi-label.is-wide {
   max-width: 224px;
+}
+
+.ww-div-icon.is-expanded .poi-label {
+  max-width: 230px;
+  white-space: pre-line;
+  overflow: visible;
 }
 
 .stage-label {
@@ -255,8 +275,16 @@ button {
   font-weight: 900;
   line-height: 1;
   transform: translate(12px, -50%);
-  white-space: pre-line;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
+}
+
+.ww-div-icon.is-expanded .stage-label {
+  max-width: 210px;
+  white-space: pre-line;
+  overflow: visible;
 }
 
 .location-dot {
@@ -276,21 +304,62 @@ button {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 9px 6px 7px;
-  border: 3px solid var(--black);
-  border-radius: 999px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   color: var(--black);
-  background: var(--oker);
-  box-shadow: var(--shadow);
+  background: transparent;
+  box-shadow: none;
   font-size: 13px;
   font-weight: 900;
   line-height: 1;
-  transform: translate(-17px, -50%);
+  transform: translate(-14px, -50%);
 }
 
-.shared-pin span {
+.shared-pin-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--black);
+  border-radius: 999px;
+  background: var(--oker);
+  box-shadow: var(--shadow);
   font-size: 16px;
   line-height: 1;
+}
+
+.shared-pin-label {
+  display: block;
+  max-width: 142px;
+  padding: 6px 9px;
+  border: 3px solid var(--black);
+  border-radius: 999px;
+  color: var(--black);
+  background: var(--paper);
+  box-shadow: 3px 3px 0 0 var(--black);
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shared-pin.is-expanded .shared-pin-label {
+  max-width: 230px;
+  border-radius: var(--radius);
+  white-space: pre-line;
+  overflow: visible;
+}
+
+.distance-line {
+  display: none;
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.05;
+}
+
+.ww-div-icon.is-expanded .distance-line,
+.shared-pin.is-expanded .distance-line {
+  display: block;
 }
 
 .app-header {
@@ -338,6 +407,37 @@ button {
 .zoom-controls {
   display: flex;
   gap: 8px;
+}
+
+.filter-bar {
+  position: absolute;
+  z-index: 1000;
+  top: max(92px, calc(env(safe-area-inset-top) + 92px));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(720px, calc(100vw - 24px));
+  pointer-events: auto;
+}
+
+.filter-chip {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 3px solid var(--black);
+  border-radius: 999px;
+  color: var(--black);
+  background: var(--white);
+  box-shadow: 3px 3px 0 0 var(--black);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.filter-chip.is-active {
+  color: var(--white);
+  background: var(--black);
 }
 
 .share-hint {
@@ -542,6 +642,21 @@ button {
     gap: 6px;
   }
 
+  .filter-bar {
+    top: max(104px, calc(env(safe-area-inset-top) + 104px));
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    max-width: calc(100vw - 16px);
+    gap: 5px;
+  }
+
+  .filter-chip {
+    min-height: 29px;
+    padding: 4px 8px;
+    border-width: 3px;
+    font-size: 11px;
+  }
+
   .ww-btn,
   .ww-btn-solid {
     min-height: 34px;
@@ -580,6 +695,10 @@ button {
     font-size: 10px;
   }
 
+  .ww-div-icon.is-expanded .stage-label {
+    max-width: 170px;
+  }
+
   .area-label {
     max-width: 150px;
     font-size: 12px;
@@ -587,6 +706,12 @@ button {
 
   .area-label-body {
     max-width: 150px;
+  }
+
+  .ww-div-icon.is-expanded .poi-label,
+  .shared-pin.is-expanded .shared-pin-label,
+  .area-label.is-active .area-label-body {
+    max-width: 180px;
   }
 
   .share-hint {
@@ -655,7 +780,8 @@ button {
 }
 
 .share-choices,
-.share-result {
+.share-result,
+.pins-list {
   display: grid;
   gap: 10px;
 }
@@ -689,6 +815,39 @@ button {
   font: inherit;
   font-size: 13px;
   font-weight: 800;
+}
+
+.pins-list {
+  margin: 2px 0 10px;
+}
+
+.pins-list[hidden] {
+  display: none;
+}
+
+.pin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 3px solid var(--black);
+  border-radius: var(--radius);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.pin-row button {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--black);
+  border-radius: 999px;
+  color: var(--black);
+  background: var(--paper);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .modal-close {
