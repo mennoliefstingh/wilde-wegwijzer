@@ -234,6 +234,8 @@ button {
 .poi-label {
   position: absolute;
   z-index: 8;
+  width: max-content;
+  min-width: 58px;
   max-width: 132px;
   padding: 7px 10px;
   border: 3px solid var(--black);
@@ -246,6 +248,8 @@ button {
   line-height: 1.05;
   transform: translate(14px, -50%);
   white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
@@ -264,6 +268,8 @@ button {
 .stage-label {
   position: absolute;
   z-index: 7;
+  width: max-content;
+  min-width: 54px;
   max-width: 128px;
   padding: 4px 7px;
   border: 3px solid var(--black);
@@ -276,6 +282,8 @@ button {
   line-height: 1;
   transform: translate(12px, -50%);
   white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
@@ -331,6 +339,8 @@ button {
 
 .shared-pin-label {
   display: block;
+  width: max-content;
+  min-width: 88px;
   max-width: 142px;
   padding: 6px 9px;
   border: 3px solid var(--black);
@@ -339,8 +349,16 @@ button {
   background: var(--paper);
   box-shadow: 3px 3px 0 0 var(--black);
   white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.poi-label.is-multiline,
+.stage-label.is-multiline,
+.shared-pin-label.is-multiline {
+  border-radius: var(--radius);
 }
 
 .shared-pin.is-expanded .shared-pin-label {

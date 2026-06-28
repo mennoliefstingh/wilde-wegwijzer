@@ -863,9 +863,10 @@ function polygonCenter(points) {
 
 function pointHtml({ markerClass, labelClass, icon, label }) {
   const compact = compactLabel(label);
+  const labelClasses = `${labelClass}${isMultilineLabel(compact) ? " is-multiline" : ""}`;
   return `
     <span class="${markerClass}">${escapeHtml(icon)}</span>
-    <strong class="${labelClass}" data-label>
+    <strong class="${labelClasses}" data-label>
       <span data-label-text>${escapeHtml(compact)}</span>
       <small class="distance-line" data-distance></small>
     </strong>
@@ -876,6 +877,11 @@ function compactLabel(value, maxLength = COMPACT_LABEL_LENGTH) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text || "Pin";
   return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function isMultilineLabel(value) {
+  const text = String(value || "");
+  return text.includes("\n") || text.length > 18;
 }
 
 function poiIcon(kind, label) {
