@@ -117,7 +117,8 @@ function initMap() {
   createPane("ww-dim-pane", 320, "none");
   createPane("ww-active-area-pane", 340, "none");
   createPane("ww-label-pane", 520, "auto");
-  createPane("ww-location-pane", 650, "auto");
+  createPane("ww-location-pane", 650, "none");
+  createPane("ww-shared-pane", 700, "auto");
 
   const image = Leaflet.imageOverlay(`assets/map.webp?v=${ASSET_VERSION}`, state.bounds, {
     pane: "ww-image-pane",
@@ -651,7 +652,7 @@ function renderSharedPins() {
         icon: "📍",
         label: pin.label || "Gedeelde pin",
       }), "shared-pin"),
-      pane: "ww-location-pane",
+      pane: "ww-shared-pane",
       riseOnHover: true,
     }).addTo(state.layers.shared);
     marker.wwMeta = { point: pin, label: pin.label || "Gedeelde pin", compact: compactLabel(pin.label || "Gedeelde pin", 28) };
