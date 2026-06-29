@@ -821,6 +821,13 @@ button {
   text-transform: uppercase;
 }
 
+.share-note {
+  margin-top: -6px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.18;
+}
+
 .share-description input,
 .share-result input {
   width: 100%;

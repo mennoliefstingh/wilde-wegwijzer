@@ -1,10 +1,10 @@
-const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-2";
+const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-3";
 
 const PRECACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=label-shapes-20260628",
+  "/styles.css?v=share-note-20260629",
   "/app.js?v=defaults-info-20260629",
   "/vendor/leaflet/leaflet.css?v=1.9.4",
   "/vendor/leaflet/leaflet.js?v=1.9.4",
