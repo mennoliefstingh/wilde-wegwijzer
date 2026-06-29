@@ -66,6 +66,7 @@ const state = {
 };
 
 init();
+registerServiceWorker();
 
 async function init() {
   if (!Leaflet) throw new Error("Leaflet is niet geladen");
@@ -87,6 +88,16 @@ async function init() {
   initMap();
   renderMapFeatures();
   restoreSharedLocation();
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  const register = () => navigator.serviceWorker.register("/sw.js").catch(() => {});
+  if (document.readyState === "complete") {
+    register();
+  } else {
+    window.addEventListener("load", register, { once: true });
+  }
 }
 
 function initMap() {
