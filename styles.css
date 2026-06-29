@@ -880,6 +880,11 @@ button {
   line-height: 1.18;
 }
 
+.share-note-small {
+  margin-top: -4px;
+  font-size: 12px;
+}
+
 .share-description input,
 .share-result input {
   width: 100%;
@@ -892,6 +897,12 @@ button {
   font: inherit;
   font-size: 13px;
   font-weight: 800;
+}
+
+.ww-btn:disabled,
+.ww-btn-solid:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
 .pins-list {

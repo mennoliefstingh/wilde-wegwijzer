@@ -20,7 +20,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="styles.css?v=stateful-20260629" />
+    <link rel="stylesheet" href="styles.css?v=share-flow-20260629" />
   </head>
   <body>
     <main class="app-shell">
@@ -90,17 +90,23 @@
           <button id="shareXBtn" class="modal-close" type="button" aria-label="Sluiten">×</button>
           <h2 id="shareTitle">Pins delen</h2>
           <div id="shareChoices" class="share-choices">
-            <button id="shareMyLocationBtn" class="ww-btn-solid" type="button">Mijn locatie toevoegen</button>
-            <button id="sharePinBtn" class="ww-btn" type="button">Pin toevoegen</button>
+            <button id="sharePinBtn" class="ww-btn" type="button">Kies op kaart</button>
+            <button id="shareMyLocationBtn" class="ww-btn-solid" type="button">Pak mijn huidige locatie</button>
+            <p id="sharePointStatus" class="share-note share-note-small">Nog geen locatie gekozen.</p>
             <label class="share-description">
-              <span>Beschrijving (optioneel)</span>
+              <span>Beschrijving</span>
               <input id="shareDescription" type="text" maxlength="140" placeholder="Bij de paarse tent, links van de boom..." />
             </label>
-            <button id="publicPinBtn" class="ww-btn" type="button">Publieke pin toevoegen</button>
-            <p class="share-note">Publieke pins ziet iedereen op de kaart. Zet er dus geen geheime afterlocatie op, tenzij dat juist de bedoeling is.</p>
+            <button id="publicPinBtn" class="ww-btn" type="button">Voeg toe als publieke pin</button>
+            <p class="share-note share-note-small">Zorg dat je eerst een beschrijving schrijft voor je op de knop drukt!</p>
+            <p class="share-note">
+              IEDEREEN kan publieke pins zien. Voeg dus leuke of nuttige dingen toe, maar verziek het niet anders zet ik
+              het subiet uit.
+            </p>
+            <button id="privatePinBtn" class="ww-btn" type="button">Voeg toe als privé-pin met deelbare link</button>
           </div>
           <div id="pinsList" class="pins-list" hidden></div>
-          <div id="shareResult" class="share-result" hidden>
+          <div id="shareResult" class="share-result">
             <label for="shareUrl">Deelbare link</label>
             <p class="share-note">
               Je pins worden opgeslagen in de tekst van de link! Stuur je vrienden dus de nieuwe link als je pins toevoegt :)
@@ -119,6 +125,6 @@
       src="https://analytics.menno.sh/count.js"
     ></script>
     <script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
-    <script src="app.js?v=stateful-20260629" type="module"></script>
+    <script src="app.js?v=share-flow-20260629" type="module"></script>
   </body>
 </html>

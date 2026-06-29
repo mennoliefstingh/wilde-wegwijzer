@@ -20,9 +20,11 @@ const els = {
   shareMyLocationBtn: document.querySelector("#shareMyLocationBtn"),
   sharePinBtn: document.querySelector("#sharePinBtn"),
   publicPinBtn: document.querySelector("#publicPinBtn"),
+  privatePinBtn: document.querySelector("#privatePinBtn"),
   shareChoices: document.querySelector("#shareChoices"),
   shareResult: document.querySelector("#shareResult"),
   shareDescription: document.querySelector("#shareDescription"),
+  sharePointStatus: document.querySelector("#sharePointStatus"),
   shareUrl: document.querySelector("#shareUrl"),
   copyShareBtn: document.querySelector("#copyShareBtn"),
   shareWhatsappBtn: document.querySelector("#shareWhatsappBtn"),
@@ -64,6 +66,7 @@ const state = {
   accuracyCircle: null,
   shareMode: null,
   shareClickHandler: null,
+  pendingSharePoint: null,
   sharedPins: [],
   sharedMarkers: new Map(),
   publicPins: [],
@@ -193,6 +196,7 @@ function bindEvents() {
   els.shareMyLocationBtn.addEventListener("click", shareMyLocation);
   els.sharePinBtn.addEventListener("click", startSharePin);
   els.publicPinBtn.addEventListener("click", startPublicPin);
+  els.privatePinBtn.addEventListener("click", addPrivatePinFromPending);
   els.copyShareBtn.addEventListener("click", copyShareUrl);
   els.shareWhatsappBtn.addEventListener("click", sharePinsToWhatsapp);
   for (const button of els.filterButtons) {
@@ -215,12 +219,12 @@ function bindEvents() {
 
 function openShare() {
   els.shareChoices.hidden = false;
-  els.shareResult.hidden = state.sharedPins.length === 0;
+  els.shareResult.hidden = false;
   els.pinsList.hidden = state.sharedPins.length === 0;
   els.copyShareBtn.hidden = false;
-  els.shareDescription.value = "";
   renderPinsList();
   updateShareUrl();
+  updateSharePointStatus();
   els.shareModal.hidden = false;
 }
 
@@ -244,7 +248,7 @@ function updateFilterButtons() {
 function startSharePin() {
   closeShare();
   state.shareMode = "pin";
-  els.shareHintText.textContent = "Tik op de kaart om je privépin te plaatsen";
+  els.shareHintText.textContent = "Tik op de kaart om de locatie te kiezen";
   els.shareHint.hidden = false;
   els.viewport.classList.add("is-placing-pin");
   els.map.classList.add("is-placing-pin");
@@ -252,24 +256,8 @@ function startSharePin() {
   state.shareClickHandler = (event) => {
     const point = mapPointFromLatLng(event.latlng);
     cancelSharePin();
-    addSharedPin(point);
+    setPendingSharePoint(point, "Locatie gekozen op de kaart");
     els.shareModal.hidden = false;
-  };
-  state.map.once("click", state.shareClickHandler);
-}
-
-function startPublicPin() {
-  closeShare();
-  state.shareMode = "public-pin";
-  els.shareHintText.textContent = "Tik op de kaart om je publieke pin te plaatsen";
-  els.shareHint.hidden = false;
-  els.viewport.classList.add("is-placing-pin");
-  els.map.classList.add("is-placing-pin");
-
-  state.shareClickHandler = (event) => {
-    const point = mapPointFromLatLng(event.latlng);
-    cancelSharePin();
-    addPublicPin(point);
   };
   state.map.once("click", state.shareClickHandler);
 }
@@ -286,7 +274,7 @@ function cancelSharePin() {
 
 function shareMyLocation() {
   if (state.lastLocation) {
-    addSharedPin(wgs84ToPixel(state.lastLocation.coords.latitude, state.lastLocation.coords.longitude));
+    setPendingSharePoint(wgs84ToPixel(state.lastLocation.coords.latitude, state.lastLocation.coords.longitude), "Huidige locatie gekozen");
     return;
   }
 
@@ -298,33 +286,53 @@ function shareMyLocation() {
   els.shareMyLocationBtn.textContent = "Zoeken...";
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      els.shareMyLocationBtn.textContent = "Mijn locatie toevoegen";
-      addSharedPin(wgs84ToPixel(position.coords.latitude, position.coords.longitude));
+      els.shareMyLocationBtn.textContent = "Pak mijn huidige locatie";
+      setPendingSharePoint(wgs84ToPixel(position.coords.latitude, position.coords.longitude), "Huidige locatie gekozen");
     },
     () => {
-      els.shareMyLocationBtn.textContent = "Mijn locatie toevoegen";
+      els.shareMyLocationBtn.textContent = "Pak mijn huidige locatie";
       showShareError("Locatie geweigerd");
     },
     { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
   );
 }
 
+function setPendingSharePoint(point, message) {
+  if (!insideMap(point.x, point.y)) {
+    showShareError("Deze locatie valt buiten de kaart");
+    return;
+  }
+  state.pendingSharePoint = {
+    x: Math.round(point.x * 10) / 10,
+    y: Math.round(point.y * 10) / 10,
+  };
+  updateSharePointStatus(message);
+}
+
+function updateSharePointStatus(message = "") {
+  if (!els.sharePointStatus) return;
+  if (state.pendingSharePoint) {
+    els.sharePointStatus.textContent = message || `Locatie gekozen (${Math.round(state.pendingSharePoint.x)}, ${Math.round(state.pendingSharePoint.y)}).`;
+  } else {
+    els.sharePointStatus.textContent = message || "Nog geen locatie gekozen.";
+  }
+}
+
 function showShareError(message) {
   els.shareChoices.hidden = false;
   els.shareResult.hidden = false;
-  els.shareUrl.value = message;
-  els.copyShareBtn.hidden = true;
+  updateSharePointStatus(message);
 }
 
 function addSharedPin(point) {
   if (!insideMap(point.x, point.y)) {
     showShareError("Deze locatie valt buiten de kaart");
-    return;
+    return false;
   }
 
   if (state.sharedPins.length >= MAX_SHARED_PINS) {
     showShareError(`Max ${MAX_SHARED_PINS} pins per link`);
-    return;
+    return false;
   }
 
   state.sharedPins.push({
@@ -343,16 +351,40 @@ function addSharedPin(point) {
   updateShareUrl();
   els.shareUrl.select();
   els.shareModal.hidden = false;
+  return true;
 }
 
-async function addPublicPin(point) {
+function addPrivatePinFromPending() {
+  if (!state.pendingSharePoint) {
+    showShareError("Kies eerst een locatie op de kaart of pak je huidige locatie");
+    return;
+  }
+  if (addSharedPin(state.pendingSharePoint)) {
+    state.pendingSharePoint = null;
+    updateSharePointStatus("Privé-pin toegevoegd aan de deelbare link");
+  }
+}
+
+async function startPublicPin() {
+  if (!state.pendingSharePoint) {
+    showShareError("Kies eerst een locatie op de kaart of pak je huidige locatie");
+    return;
+  }
+  const label = els.shareDescription.value.trim().slice(0, DESCRIPTION_MAX_LENGTH);
+  if (!label) {
+    showShareError("Schrijf eerst een beschrijving voor je publieke pin");
+    return;
+  }
+  await addPublicPin(state.pendingSharePoint, label);
+}
+
+async function addPublicPin(point, label) {
   if (!insideMap(point.x, point.y)) {
     showShareError("Deze locatie valt buiten de kaart");
     els.shareModal.hidden = false;
     return;
   }
 
-  const label = els.shareDescription.value.trim().slice(0, DESCRIPTION_MAX_LENGTH);
   try {
     els.publicPinBtn.textContent = "Opslaan...";
     const response = await fetch("/api/public-pins", {
@@ -369,17 +401,21 @@ async function addPublicPin(point) {
     const pin = normalizePublicPin(payload.pin);
     if (pin) state.publicPins.push(pin);
     els.shareDescription.value = "";
+    state.pendingSharePoint = null;
     renderPublicPins();
-    closeShare();
+    updateSharePointStatus("Publieke pin toegevoegd");
   } catch (error) {
     showShareError(error.message || "Opslaan mislukt");
-    els.shareModal.hidden = false;
   } finally {
-    els.publicPinBtn.textContent = "Publieke pin toevoegen";
+    els.publicPinBtn.textContent = "Voeg toe als publieke pin";
   }
 }
 
 async function copyShareUrl() {
+  if (!els.shareUrl.value) {
+    showShareError("Voeg eerst een privé-pin toe voor een deelbare link");
+    return;
+  }
   try {
     await navigator.clipboard.writeText(els.shareUrl.value);
     els.copyShareBtn.textContent = "Gekopieerd";
@@ -394,6 +430,10 @@ async function copyShareUrl() {
 async function sharePinsToWhatsapp() {
   updateShareUrl();
   const url = els.shareUrl.value;
+  if (!url) {
+    showShareError("Voeg eerst een privé-pin toe voor een deelbare link");
+    return;
+  }
   const text = `Pins op Wilde Wegwijzer: ${url}`;
   if (navigator.share) {
     try {
@@ -432,6 +472,8 @@ function removeSharedPin(id) {
 
 function updateShareUrl() {
   els.shareUrl.value = state.sharedPins.length ? shareUrlForPins(state.sharedPins) : "";
+  els.copyShareBtn.disabled = state.sharedPins.length === 0;
+  els.shareWhatsappBtn.disabled = state.sharedPins.length === 0;
 }
 
 function openInfo() {
