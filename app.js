@@ -57,6 +57,7 @@ const state = {
   },
   locationWatch: null,
   lastLocation: null,
+  locationHasCentered: false,
   locationDot: null,
   accuracyCircle: null,
   shareMode: null,
@@ -588,6 +589,7 @@ function toggleLocation() {
     navigator.geolocation.clearWatch(state.locationWatch);
     state.locationWatch = null;
     state.lastLocation = null;
+    state.locationHasCentered = false;
     els.locateBtn.classList.remove("is-active");
     renderLocation();
     return;
@@ -600,6 +602,7 @@ function toggleLocation() {
 
   els.locateBtn.querySelector("span:last-child").textContent = "Zoeken...";
   els.locateBtn.classList.add("is-active");
+  state.locationHasCentered = false;
   state.locationWatch = navigator.geolocation.watchPosition(
     (position) => {
       state.lastLocation = position;
@@ -610,6 +613,7 @@ function toggleLocation() {
       els.locateBtn.querySelector("span:last-child").textContent = "Geweigerd";
       els.locateBtn.classList.remove("is-active");
       state.locationWatch = null;
+      state.locationHasCentered = false;
     },
     { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
   );
@@ -647,7 +651,10 @@ function renderLocation() {
     pane: "ww-location-pane",
   }).addTo(state.layers.location);
 
-  centerOn(point);
+  if (!state.locationHasCentered) {
+    state.locationHasCentered = true;
+    centerOn(point);
+  }
 }
 
 function renderSharedPins() {
