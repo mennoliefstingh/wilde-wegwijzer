@@ -50,9 +50,8 @@ const state = {
   areaLabelMarkers: new Map(),
   filters: {
     stages: true,
-    facilities: false,
     campings: false,
-    info: true,
+    misc: true,
     festival: false,
   },
   locationWatch: null,
@@ -822,9 +821,9 @@ function textLabel(value) {
 
 function filterVisible(kind) {
   if (kind === "stage") return state.filters.stages;
-  if (kind === "facility") return state.filters.facilities;
+  if (kind === "facility") return state.filters.misc;
   if (kind === "camping") return state.filters.campings;
-  if (kind === "info") return state.filters.info;
+  if (kind === "info") return state.filters.misc;
   return true;
 }
 

@@ -1,11 +1,11 @@
-const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-5";
+const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-6";
 
 const PRECACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/styles.css?v=share-note-20260629",
-  "/app.js?v=location-follow-20260629",
+  "/app.js?v=misc-filter-20260629",
   "/vendor/leaflet/leaflet.css?v=1.9.4",
   "/vendor/leaflet/leaflet.js?v=1.9.4",
   "/assets/map.metadata.json?v=30cm-areas-20260629-marktplaats",
