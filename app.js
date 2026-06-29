@@ -1,4 +1,4 @@
-const ASSET_VERSION = "30cm-areas-20260629-info";
+const ASSET_VERSION = "30cm-areas-20260629-marktplaats";
 const MAP_SCALE_METERS = 0.3;
 const DESCRIPTION_MAX_LENGTH = 80;
 const COMPACT_LABEL_LENGTH = 34;
