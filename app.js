@@ -1,4 +1,4 @@
-const ASSET_VERSION = "30cm-areas-20260627";
+const ASSET_VERSION = "30cm-areas-20260629-info";
 const MAP_SCALE_METERS = 0.3;
 const DESCRIPTION_MAX_LENGTH = 80;
 const COMPACT_LABEL_LENGTH = 34;
@@ -52,8 +52,8 @@ const state = {
     stages: true,
     facilities: false,
     campings: false,
-    info: false,
-    festival: true,
+    info: true,
+    festival: false,
   },
   locationWatch: null,
   lastLocation: null,

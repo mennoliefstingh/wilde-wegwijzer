@@ -1,18 +1,18 @@
-const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-1";
+const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-2";
 
 const PRECACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/styles.css?v=label-shapes-20260628",
-  "/app.js?v=pwa-20260629",
+  "/app.js?v=defaults-info-20260629",
   "/vendor/leaflet/leaflet.css?v=1.9.4",
   "/vendor/leaflet/leaflet.js?v=1.9.4",
-  "/assets/map.metadata.json?v=30cm-areas-20260627",
-  "/assets/stages.geojson?v=30cm-areas-20260627",
-  "/assets/areas.geojson?v=30cm-areas-20260627",
-  "/assets/map.webp?v=30cm-areas-20260627",
-  "/assets/map.png?v=30cm-areas-20260627",
+  "/assets/map.metadata.json?v=30cm-areas-20260629-info",
+  "/assets/stages.geojson?v=30cm-areas-20260629-info",
+  "/assets/areas.geojson?v=30cm-areas-20260629-info",
+  "/assets/map.webp?v=30cm-areas-20260629-info",
+  "/assets/map.png?v=30cm-areas-20260629-info",
   "/icons/icon-180.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

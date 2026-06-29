@@ -2340,6 +2340,60 @@
         ],
         "createdAt": "2026-06-27T18:29:54.893Z"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.8835966831556945,
+          52.68505342189601
+        ]
+      },
+      "properties": {
+        "id": "facility-sauna-from-stage",
+        "title": "Sauna",
+        "text": "Sauna",
+        "pixelPoints": [
+          {
+            "x": 1269.4725298796402,
+            "y": 2354.939959840786
+          },
+          {
+            "x": 1285.4725298796402,
+            "y": 2354.939959840786
+          },
+          {
+            "x": 1277.4725298796402,
+            "y": 2378.939959840786
+          }
+        ],
+        "createdAt": "2026-06-29T00:00:00.000Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": null,
+      "properties": {
+        "id": "info-offline-welcome",
+        "title": "INFO",
+        "text": "Welkom! Wil je deze kaart offline hebben? Druk op deel -> zet op beginscherm (iOS/Safari) en op Android zal het ook zoiets zijn.",
+        "pixelPoints": [
+          {
+            "x": 1525.8,
+            "y": 209
+          },
+          {
+            "x": 1541.8,
+            "y": 209
+          },
+          {
+            "x": 1533.8,
+            "y": 233
+          }
+        ],
+        "createdAt": "2026-06-29T00:00:00.000Z"
+      }
     }
   ]
 }

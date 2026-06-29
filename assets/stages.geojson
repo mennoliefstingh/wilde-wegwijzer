@@ -179,25 +179,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          5.8835966831556945,
-          52.68505342189601
-        ]
-      },
-      "properties": {
-        "id": "8a853bc8-d31f-44a7-af34-d7bb17a2d542",
-        "name": "Sauna",
-        "notes": "",
-        "pixelX": 1277.4725298796402,
-        "pixelY": 2362.939959840786,
-        "rdX": 188565.66865295934,
-        "rdY": 522072.9125130082
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           5.881235615306124,
           52.682977943264646
         ]
