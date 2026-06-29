@@ -20,7 +20,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="styles.css?v=share-note-20260629" />
+    <link rel="stylesheet" href="styles.css?v=stateful-20260629" />
   </head>
   <body>
     <main class="app-shell">
@@ -47,11 +47,12 @@
         <button class="filter-chip is-active" type="button" data-filter="stages">Podia</button>
         <button class="filter-chip" type="button" data-filter="campings">Campings</button>
         <button class="filter-chip is-active" type="button" data-filter="misc">Overig</button>
+        <button class="filter-chip is-active" type="button" data-filter="publicPins">Publieke pins</button>
         <button class="filter-chip" type="button" data-filter="festival">Alleen festivalterrein</button>
       </div>
 
       <div id="shareHint" class="share-hint" hidden>
-        <span>Tik op de kaart om je pin te plaatsen</span>
+        <span id="shareHintText">Tik op de kaart om je pin te plaatsen</span>
         <button id="shareCancelBtn" type="button">Annuleer</button>
       </div>
 
@@ -93,8 +94,10 @@
             <button id="sharePinBtn" class="ww-btn" type="button">Pin toevoegen</button>
             <label class="share-description">
               <span>Beschrijving (optioneel)</span>
-              <input id="shareDescription" type="text" maxlength="80" placeholder="Bij de paarse tent, links van de boom..." />
+              <input id="shareDescription" type="text" maxlength="140" placeholder="Bij de paarse tent, links van de boom..." />
             </label>
+            <button id="publicPinBtn" class="ww-btn" type="button">Publieke pin toevoegen</button>
+            <p class="share-note">Publieke pins ziet iedereen op de kaart. Zet er dus geen geheime afterlocatie op, tenzij dat juist de bedoeling is.</p>
           </div>
           <div id="pinsList" class="pins-list" hidden></div>
           <div id="shareResult" class="share-result" hidden>
@@ -116,6 +119,6 @@
       src="https://analytics.menno.sh/count.js"
     ></script>
     <script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
-    <script src="app.js?v=misc-filter-20260629" type="module"></script>
+    <script src="app.js?v=stateful-20260629" type="module"></script>
   </body>
 </html>

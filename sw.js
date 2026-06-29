@@ -1,18 +1,18 @@
-const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-6";
+const CACHE_NAME = "wilde-wegwijzer-pwa-20260629-stateful-1";
 
 const PRECACHE_URLS = [
   "/",
   "/index.html",
+  "/admin.html",
   "/manifest.webmanifest",
-  "/styles.css?v=share-note-20260629",
-  "/app.js?v=misc-filter-20260629",
+  "/styles.css?v=stateful-20260629",
+  "/app.js?v=stateful-20260629",
+  "/admin.js?v=stateful-20260629",
   "/vendor/leaflet/leaflet.css?v=1.9.4",
   "/vendor/leaflet/leaflet.js?v=1.9.4",
-  "/assets/map.metadata.json?v=30cm-areas-20260629-marktplaats",
-  "/assets/stages.geojson?v=30cm-areas-20260629-marktplaats",
-  "/assets/areas.geojson?v=30cm-areas-20260629-marktplaats",
-  "/assets/map.webp?v=30cm-areas-20260629-marktplaats",
-  "/assets/map.png?v=30cm-areas-20260629-marktplaats",
+  "/api/bootstrap",
+  "/assets/map.webp?v=stateful-20260629",
+  "/assets/map.png?v=stateful-20260629",
   "/icons/icon-180.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -54,6 +54,19 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => caches.match("/index.html").then((response) => response || caches.match("/")))
+    );
+    return;
+  }
+
+  if (url.pathname === "/api/bootstrap") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

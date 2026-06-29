@@ -1,6 +1,6 @@
-const ASSET_VERSION = "30cm-areas-20260629-marktplaats";
+const ASSET_VERSION = "stateful-20260629";
 const MAP_SCALE_METERS = 0.3;
-const DESCRIPTION_MAX_LENGTH = 80;
+const DESCRIPTION_MAX_LENGTH = 140;
 const COMPACT_LABEL_LENGTH = 34;
 const MAX_SHARED_PINS = 12;
 
@@ -12,12 +12,14 @@ const els = {
   locateBtn: document.querySelector("#locateBtn"),
   shareBtn: document.querySelector("#shareBtn"),
   shareHint: document.querySelector("#shareHint"),
+  shareHintText: document.querySelector("#shareHintText"),
   shareCancelBtn: document.querySelector("#shareCancelBtn"),
   shareModal: document.querySelector("#shareModal"),
   shareCloseBtn: document.querySelector("#shareCloseBtn"),
   shareXBtn: document.querySelector("#shareXBtn"),
   shareMyLocationBtn: document.querySelector("#shareMyLocationBtn"),
   sharePinBtn: document.querySelector("#sharePinBtn"),
+  publicPinBtn: document.querySelector("#publicPinBtn"),
   shareChoices: document.querySelector("#shareChoices"),
   shareResult: document.querySelector("#shareResult"),
   shareDescription: document.querySelector("#shareDescription"),
@@ -53,6 +55,7 @@ const state = {
     campings: false,
     misc: true,
     festival: false,
+    publicPins: true,
   },
   locationWatch: null,
   lastLocation: null,
@@ -63,6 +66,8 @@ const state = {
   shareClickHandler: null,
   sharedPins: [],
   sharedMarkers: new Map(),
+  publicPins: [],
+  publicMarkers: new Map(),
 };
 
 init();
@@ -72,17 +77,17 @@ async function init() {
   if (!Leaflet) throw new Error("Leaflet is niet geladen");
 
   bindEvents();
-  const [metadata, stages, areas] = await Promise.all([
-    fetchJson(`assets/map.metadata.json?v=${ASSET_VERSION}`),
-    fetchJson(`assets/stages.geojson?v=${ASSET_VERSION}`),
-    fetchJson(`assets/areas.geojson?v=${ASSET_VERSION}`),
-  ]);
+  const bootstrap = await fetchJson("/api/bootstrap");
+  const metadata = bootstrap.metadata || {};
+  const stages = bootstrap.stages || { features: [] };
+  const areas = bootstrap.areas || { features: [] };
 
   state.metadata = metadata;
   state.imageW = Number(metadata.output_size_pixels?.[0] || 0);
   state.imageH = Number(metadata.output_size_pixels?.[1] || 0);
   state.stages = normalizeStages(stages.features || []);
   state.areas = normalizeAreas(areas.features || []);
+  state.publicPins = normalizePublicPins(bootstrap.publicPins || []);
   state.poiAreaThreshold = poiAreaThreshold(state.areas);
 
   initMap();
@@ -129,6 +134,7 @@ function initMap() {
   createPane("ww-active-area-pane", 340, "none");
   createPane("ww-label-pane", 520, "auto");
   createPane("ww-location-pane", 650, "none");
+  createPane("ww-public-pane", 680, "auto");
   createPane("ww-shared-pane", 700, "auto");
 
   const image = Leaflet.imageOverlay(`assets/map.webp?v=${ASSET_VERSION}`, state.bounds, {
@@ -151,6 +157,7 @@ function initMap() {
   state.layers.info = Leaflet.layerGroup().addTo(state.map);
   state.layers.stages = Leaflet.layerGroup().addTo(state.map);
   state.layers.location = Leaflet.layerGroup().addTo(state.map);
+  state.layers.publicPins = Leaflet.layerGroup().addTo(state.map);
   state.layers.shared = Leaflet.layerGroup().addTo(state.map);
 
   fitMapToOverview();
@@ -185,6 +192,7 @@ function bindEvents() {
   els.shareCancelBtn.addEventListener("click", cancelSharePin);
   els.shareMyLocationBtn.addEventListener("click", shareMyLocation);
   els.sharePinBtn.addEventListener("click", startSharePin);
+  els.publicPinBtn.addEventListener("click", startPublicPin);
   els.copyShareBtn.addEventListener("click", copyShareUrl);
   els.shareWhatsappBtn.addEventListener("click", sharePinsToWhatsapp);
   for (const button of els.filterButtons) {
@@ -236,6 +244,7 @@ function updateFilterButtons() {
 function startSharePin() {
   closeShare();
   state.shareMode = "pin";
+  els.shareHintText.textContent = "Tik op de kaart om je privépin te plaatsen";
   els.shareHint.hidden = false;
   els.viewport.classList.add("is-placing-pin");
   els.map.classList.add("is-placing-pin");
@@ -249,10 +258,27 @@ function startSharePin() {
   state.map.once("click", state.shareClickHandler);
 }
 
+function startPublicPin() {
+  closeShare();
+  state.shareMode = "public-pin";
+  els.shareHintText.textContent = "Tik op de kaart om je publieke pin te plaatsen";
+  els.shareHint.hidden = false;
+  els.viewport.classList.add("is-placing-pin");
+  els.map.classList.add("is-placing-pin");
+
+  state.shareClickHandler = (event) => {
+    const point = mapPointFromLatLng(event.latlng);
+    cancelSharePin();
+    addPublicPin(point);
+  };
+  state.map.once("click", state.shareClickHandler);
+}
+
 function cancelSharePin() {
   if (state.shareClickHandler && state.map) state.map.off("click", state.shareClickHandler);
   state.shareClickHandler = null;
   state.shareMode = null;
+  els.shareHintText.textContent = "Tik op de kaart om je pin te plaatsen";
   els.shareHint.hidden = true;
   els.viewport.classList.remove("is-placing-pin");
   els.map.classList.remove("is-placing-pin");
@@ -317,6 +343,40 @@ function addSharedPin(point) {
   updateShareUrl();
   els.shareUrl.select();
   els.shareModal.hidden = false;
+}
+
+async function addPublicPin(point) {
+  if (!insideMap(point.x, point.y)) {
+    showShareError("Deze locatie valt buiten de kaart");
+    els.shareModal.hidden = false;
+    return;
+  }
+
+  const label = els.shareDescription.value.trim().slice(0, DESCRIPTION_MAX_LENGTH);
+  try {
+    els.publicPinBtn.textContent = "Opslaan...";
+    const response = await fetch("/api/public-pins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        x: Math.round(point.x * 10) / 10,
+        y: Math.round(point.y * 10) / 10,
+        label,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Opslaan mislukt");
+    const pin = normalizePublicPin(payload.pin);
+    if (pin) state.publicPins.push(pin);
+    els.shareDescription.value = "";
+    renderPublicPins();
+    closeShare();
+  } catch (error) {
+    showShareError(error.message || "Opslaan mislukt");
+    els.shareModal.hidden = false;
+  } finally {
+    els.publicPinBtn.textContent = "Publieke pin toevoegen";
+  }
 }
 
 async function copyShareUrl() {
@@ -395,14 +455,14 @@ function normalizeStages(features) {
       const coords = feature.geometry?.coordinates || [];
       return {
         id: props.id || `stage-${index + 1}`,
-        name: props.name || `Plek ${index + 1}`,
+        name: props.name || props.title || `Plek ${index + 1}`,
         lon: Number(coords[0]),
         lat: Number(coords[1]),
         x: Number(props.pixelX),
         y: Number(props.pixelY),
       };
     })
-    .filter((stage) => Number.isFinite(stage.lon) && Number.isFinite(stage.lat))
+    .filter((stage) => (Number.isFinite(stage.lon) && Number.isFinite(stage.lat)) || (Number.isFinite(stage.x) && Number.isFinite(stage.y)))
     .filter((stage) => !/ver?wilderij/i.test(stage.name));
 }
 
@@ -413,24 +473,54 @@ function normalizeAreas(features) {
       const title = String(props.title || `Gebied ${index + 1}`).trim();
       const text = String(props.text || title).trim();
       const pixelPoints = Array.isArray(props.pixelPoints) ? props.pixelPoints : [];
+      const dim = Boolean(props.isDim) || title.toUpperCase() === "DIM" || text.toUpperCase() === "DIM";
+      const x = Number(props.pixelX);
+      const y = Number(props.pixelY);
+      const points = pixelPoints
+        .map((point) => ({ x: Number(point.x), y: Number(point.y) }))
+        .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+      if (!points.length && Number.isFinite(x) && Number.isFinite(y)) {
+        points.push(
+          { x: x - 6, y: y - 6 },
+          { x: x + 6, y: y - 6 },
+          { x: x + 6, y: y + 6 },
+          { x: x - 6, y: y + 6 },
+        );
+      }
       return {
         id: props.id || `area-${index + 1}`,
         title,
         text,
-        dim: title.toUpperCase() === "DIM" || text.toUpperCase() === "DIM",
+        dim,
         label: title.toUpperCase() === "DIM" ? textLabel(text) : text,
-        category: areaCategory(title, text),
-        points: pixelPoints
-          .map((point) => ({ x: Number(point.x), y: Number(point.y) }))
-          .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y)),
+        kind: props.mapKind || "",
+        displayKind: props.displayKind || "",
+        category: props.styleCategory || areaCategory(title, text),
+        points,
       };
     })
     .filter((area) => area.points.length >= 3);
 }
 
+function normalizePublicPins(pins) {
+  return pins.map(normalizePublicPin).filter((pin) => pin && insideMap(pin.x, pin.y));
+}
+
+function normalizePublicPin(pin) {
+  if (!pin) return null;
+  const normalized = {
+    id: pin.id || `public-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    x: Number(pin.x),
+    y: Number(pin.y),
+    label: String(pin.label || "").slice(0, DESCRIPTION_MAX_LENGTH),
+  };
+  return Number.isFinite(normalized.x) && Number.isFinite(normalized.y) ? normalized : null;
+}
+
 function renderMapFeatures() {
   renderAreas();
   renderStages();
+  renderPublicPins();
 }
 
 function renderAreas() {
@@ -456,7 +546,8 @@ function renderAreas() {
 
     if (!filterVisible(kind)) continue;
 
-    if (isPoiArea(area) || kind === "facility" || kind === "info") {
+    const asPoint = area.displayKind ? area.displayKind === "point" : (isPoiArea(area) || kind === "facility" || kind === "info");
+    if (asPoint) {
       renderAreaPoi(area, layerForKind(kind), kind);
       continue;
     }
@@ -682,6 +773,33 @@ function renderSharedPins() {
   }
 }
 
+function renderPublicPins() {
+  state.layers.publicPins.clearLayers();
+  state.publicMarkers.clear();
+  if (!state.filters.publicPins || !state.publicPins.length || !state.map) return;
+
+  for (const pin of state.publicPins) {
+    const label = pin.label || "Publieke pin";
+    const marker = Leaflet.marker(pixelLatLng(pin), {
+      icon: divIcon(pointHtml({
+        markerClass: "public-pin-icon",
+        labelClass: "public-pin-label",
+        icon: "📌",
+        label,
+      }), "public-pin"),
+      pane: "ww-public-pane",
+      riseOnHover: true,
+    }).addTo(state.layers.publicPins);
+    marker.wwMeta = { point: pin, label, compact: compactLabel(label, 28) };
+    state.publicMarkers.set(pin.id, marker);
+
+    marker.on("click", (event) => {
+      Leaflet.DomEvent.stop(event.originalEvent);
+      togglePointMarker(marker);
+    });
+  }
+}
+
 function togglePointMarker(marker) {
   const element = marker.getElement();
   const meta = marker.wwMeta;
@@ -834,6 +952,7 @@ function layerForKind(kind) {
 }
 
 function areaKind(area) {
+  if (area.kind) return area.kind;
   const value = `${area.title} ${area.text}`.toLowerCase();
   if (area.dim) return "dim";
   if (area.title.toUpperCase() === "INFO") return "info";
@@ -843,6 +962,7 @@ function areaKind(area) {
 }
 
 function isPoiArea(area) {
+  if (area.displayKind) return area.displayKind === "point";
   const value = `${area.title} ${area.text}`.toLowerCase();
   return (
     value.includes("zweefhut") ||

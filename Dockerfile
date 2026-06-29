@@ -1,4 +1,14 @@
-FROM nginx:1.27-alpine
+FROM python:3.12-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY . /usr/share/nginx/html
+WORKDIR /app
+
+ENV HOST=0.0.0.0
+ENV PORT=8080
+ENV DATABASE_PATH=/data/wildewegwijzer.sqlite
+ENV SEED_PATH=/app/seed/wilde-weide-2026.json
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["python", "server.py"]
