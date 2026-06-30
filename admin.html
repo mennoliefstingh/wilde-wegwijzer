@@ -12,14 +12,9 @@
     <main class="admin-shell">
       <section id="loginPanel" class="admin-login">
         <h1>Wilde Wegwijzer Admin</h1>
-        <form id="loginForm" class="admin-form" action="/api/admin/login?redirect=/admin" method="post">
-          <label>
-            <span>Wachtwoord</span>
-            <input id="adminPassword" name="password" type="password" autocomplete="current-password" required />
-          </label>
-          <button class="ww-btn-solid" type="submit">Inloggen</button>
-          <p id="loginStatus" class="admin-status"></p>
-        </form>
+        <div class="admin-form">
+          <p id="loginStatus" class="admin-status">Admin laden...</p>
+        </div>
       </section>
 
       <section id="adminWorkbench" class="admin-workbench" hidden>
@@ -29,7 +24,7 @@
               <p>Wilde</p>
               <h1>Admin</h1>
             </div>
-            <button id="logoutBtn" class="ww-btn" type="button">Uitloggen</button>
+            <button id="logoutBtn" class="ww-btn" type="button">Kaart</button>
           </header>
 
           <div class="admin-actions-row">
@@ -120,6 +115,6 @@
     </main>
 
     <script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
-    <script src="admin.js?v=form-login-20260630" type="module"></script>
+    <script src="admin.js?v=basic-auth-20260630" type="module"></script>
   </body>
 </html>

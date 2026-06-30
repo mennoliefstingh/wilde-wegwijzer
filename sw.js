@@ -1,4 +1,4 @@
-const CACHE_NAME = "wilde-wegwijzer-pwa-20260630-form-login-1";
+const CACHE_NAME = "wilde-wegwijzer-pwa-20260630-basic-auth-1";
 
 const PRECACHE_URLS = [
   "/",
@@ -7,7 +7,7 @@ const PRECACHE_URLS = [
   "/manifest.webmanifest",
   "/styles.css?v=public-pin-style-20260630",
   "/app.js?v=public-pin-style-20260630",
-  "/admin.js?v=form-login-20260630",
+  "/admin.js?v=basic-auth-20260630",
   "/vendor/leaflet/leaflet.css?v=1.9.4",
   "/vendor/leaflet/leaflet.js?v=1.9.4",
   "/api/bootstrap",

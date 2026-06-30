@@ -2,8 +2,6 @@ const Leaflet = window.L;
 
 const els = {
   loginPanel: document.querySelector("#loginPanel"),
-  loginForm: document.querySelector("#loginForm"),
-  adminPassword: document.querySelector("#adminPassword"),
   loginStatus: document.querySelector("#loginStatus"),
   workbench: document.querySelector("#adminWorkbench"),
   logoutBtn: document.querySelector("#logoutBtn"),
@@ -47,7 +45,7 @@ const state = {
 init();
 
 function init() {
-  els.logoutBtn.addEventListener("click", logout);
+  els.logoutBtn.addEventListener("click", () => window.location.assign("/"));
   els.newPointBtn.addEventListener("click", startNewPoint);
   els.newAreaBtn.addEventListener("click", startNewArea);
   els.finishAreaBtn.addEventListener("click", finishArea);
@@ -60,12 +58,6 @@ function showAdminLoadError(error) {
   els.loginStatus.textContent = error.message || "Admin laden mislukt";
   els.loginPanel.hidden = false;
   els.workbench.hidden = true;
-}
-
-async function logout() {
-  await api("/api/admin/logout", { method: "POST", allowError: true });
-  els.workbench.hidden = true;
-  els.loginPanel.hidden = false;
 }
 
 async function loadAdmin() {
@@ -84,7 +76,9 @@ async function loadAdmin() {
   }
 
   if (!featuresResponse.ok) {
-    els.loginStatus.textContent = featuresResponse.data?.error || "Niet ingelogd";
+    els.loginStatus.textContent = featuresResponse.status === 401
+      ? "Basic Auth ontbreekt of is verlopen. Herlaad /admin."
+      : (featuresResponse.data?.error || "Admin API niet bereikbaar");
     els.loginPanel.hidden = false;
     els.workbench.hidden = true;
     return;
