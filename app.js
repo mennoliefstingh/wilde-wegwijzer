@@ -826,7 +826,7 @@ function renderPublicPins() {
       icon: divIcon(pointHtml({
         markerClass: "public-pin-icon",
         labelClass: "public-pin-label",
-        icon: "📌",
+        icon: "!",
         label,
       }), "public-pin"),
       pane: "ww-public-pane",
