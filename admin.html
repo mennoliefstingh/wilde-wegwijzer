@@ -12,10 +12,10 @@
     <main class="admin-shell">
       <section id="loginPanel" class="admin-login">
         <h1>Wilde Wegwijzer Admin</h1>
-        <form id="loginForm" class="admin-form">
+        <form id="loginForm" class="admin-form" action="/api/admin/login?redirect=/admin" method="post">
           <label>
             <span>Wachtwoord</span>
-            <input id="adminPassword" type="password" autocomplete="current-password" required />
+            <input id="adminPassword" name="password" type="password" autocomplete="current-password" required />
           </label>
           <button class="ww-btn-solid" type="submit">Inloggen</button>
           <p id="loginStatus" class="admin-status"></p>
@@ -120,6 +120,6 @@
     </main>
 
     <script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
-    <script src="admin.js?v=admin-login-reload-20260630" type="module"></script>
+    <script src="admin.js?v=form-login-20260630" type="module"></script>
   </body>
 </html>

@@ -162,15 +162,35 @@ class WildeWegwijzerHandler(SimpleHTTPRequestHandler):
         self.send_json({"error": "Niet gevonden"}, HTTPStatus.NOT_FOUND)
 
     def handle_admin_login(self):
+        parsed = urlparse(self.path)
+        query = parse_qs(parsed.query)
+        redirect_to = safe_redirect(query.get("redirect", [""])[0])
+        wants_redirect = bool(redirect_to)
         if not ADMIN_PASSWORD or not SESSION_SECRET:
+            if wants_redirect:
+                self.redirect(f"{redirect_to}?login=config")
+                return
             self.send_json({"error": "Admin is niet geconfigureerd"}, HTTPStatus.SERVICE_UNAVAILABLE)
             return
-        payload = self.read_json()
+        payload = self.read_login_payload()
         password = str(payload.get("password") or "")
         if not hmac.compare_digest(password, ADMIN_PASSWORD):
+            if wants_redirect:
+                self.redirect(f"{redirect_to}?login=bad")
+                return
             self.send_json({"error": "Nope"}, HTTPStatus.UNAUTHORIZED)
             return
         token = signed_session_token()
+        if wants_redirect:
+            self.send_response(HTTPStatus.SEE_OTHER)
+            self.send_header("Location", redirect_to)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header(
+                "Set-Cookie",
+                f"{COOKIE_NAME}={token}; Max-Age={SESSION_MAX_AGE}; Path=/; HttpOnly; SameSite=Lax",
+            )
+            self.end_headers()
+            return
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
@@ -180,6 +200,17 @@ class WildeWegwijzerHandler(SimpleHTTPRequestHandler):
         )
         self.end_headers()
         self.wfile.write(json.dumps({"ok": True}).encode("utf-8"))
+
+    def read_login_payload(self):
+        content_type = self.headers.get("Content-Type", "")
+        if "application/x-www-form-urlencoded" not in content_type:
+            return self.read_json()
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > 8 * 1024:
+            raise ValueError("Request te groot")
+        raw = self.rfile.read(length).decode("utf-8") if length else ""
+        data = parse_qs(raw)
+        return {key: values[-1] if values else "" for key, values in data.items()}
 
     def read_json(self):
         length = int(self.headers.get("Content-Length") or 0)
@@ -196,6 +227,12 @@ class WildeWegwijzerHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def redirect(self, location):
+        self.send_response(HTTPStatus.SEE_OTHER)
+        self.send_header("Location", location)
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
 
     def is_admin(self):
         cookie = SimpleCookie(self.headers.get("Cookie"))
@@ -256,6 +293,12 @@ def static_path_allowed(relative):
     if relative in allowed_files:
         return True
     return relative.startswith(("assets/", "icons/", "vendor/"))
+
+
+def safe_redirect(value):
+    if value in ("/admin", "/admin/"):
+        return "/admin"
+    return ""
 
 
 def cache_control_for(relative):

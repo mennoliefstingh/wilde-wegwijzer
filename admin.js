@@ -47,7 +47,6 @@ const state = {
 init();
 
 function init() {
-  els.loginForm.addEventListener("submit", login);
   els.logoutBtn.addEventListener("click", logout);
   els.newPointBtn.addEventListener("click", startNewPoint);
   els.newAreaBtn.addEventListener("click", startNewArea);
@@ -55,27 +54,6 @@ function init() {
   els.featureForm.addEventListener("submit", saveFeature);
   els.deleteFeatureBtn.addEventListener("click", deleteFeature);
   loadAdmin().catch(showAdminLoadError);
-}
-
-async function login(event) {
-  event.preventDefault();
-  els.loginStatus.textContent = "Even kijken...";
-  try {
-    const response = await api("/api/admin/login", {
-      method: "POST",
-      body: { password: els.adminPassword.value },
-      allowError: true,
-    });
-    if (!response.ok) {
-      els.loginStatus.textContent = response.data?.error || "Inloggen mislukt";
-      return;
-    }
-    els.adminPassword.value = "";
-    els.loginStatus.textContent = "Admin laden...";
-    window.location.reload();
-  } catch (error) {
-    els.loginStatus.textContent = error.message || "Inloggen bleef hangen";
-  }
 }
 
 function showAdminLoadError(error) {
