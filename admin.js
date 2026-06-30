@@ -60,17 +60,22 @@ function init() {
 async function login(event) {
   event.preventDefault();
   els.loginStatus.textContent = "Even kijken...";
-  const response = await api("/api/admin/login", {
-    method: "POST",
-    body: { password: els.adminPassword.value },
-    allowError: true,
-  });
-  if (!response.ok) {
-    els.loginStatus.textContent = response.data?.error || "Inloggen mislukt";
-    return;
+  try {
+    const response = await api("/api/admin/login", {
+      method: "POST",
+      body: { password: els.adminPassword.value },
+      allowError: true,
+    });
+    if (!response.ok) {
+      els.loginStatus.textContent = response.data?.error || "Inloggen mislukt";
+      return;
+    }
+    els.adminPassword.value = "";
+    els.loginStatus.textContent = "Admin laden...";
+    await loadAdmin();
+  } catch (error) {
+    els.loginStatus.textContent = error.message || "Inloggen bleef hangen";
   }
-  els.adminPassword.value = "";
-  await loadAdmin();
 }
 
 async function logout() {
@@ -80,13 +85,22 @@ async function logout() {
 }
 
 async function loadAdmin() {
-  const [bootstrap, featuresResponse, pinsResponse] = await Promise.all([
-    api("/api/bootstrap"),
-    api("/api/admin/features", { allowError: true }),
-    api("/api/admin/public-pins", { allowError: true }),
-  ]);
+  let bootstrap;
+  let featuresResponse;
+  let pinsResponse;
+  try {
+    bootstrap = await api("/api/bootstrap");
+    featuresResponse = await api("/api/admin/features", { allowError: true });
+    pinsResponse = await api("/api/admin/public-pins", { allowError: true });
+  } catch (error) {
+    els.loginStatus.textContent = error.message || "Admin laden mislukt";
+    els.loginPanel.hidden = false;
+    els.workbench.hidden = true;
+    return;
+  }
 
   if (!featuresResponse.ok) {
+    els.loginStatus.textContent = featuresResponse.data?.error || "Niet ingelogd";
     els.loginPanel.hidden = false;
     els.workbench.hidden = true;
     return;
@@ -97,6 +111,7 @@ async function loadAdmin() {
   state.publicPins = pinsResponse.data?.pins || [];
   els.loginPanel.hidden = true;
   els.workbench.hidden = false;
+  els.loginStatus.textContent = "";
   initMap();
   renderAll();
 }
@@ -374,6 +389,7 @@ function clearFeatureForm() {
 async function api(url, options = {}) {
   const response = await fetch(url, {
     method: options.method || "GET",
+    credentials: "same-origin",
     headers: options.body ? { "Content-Type": "application/json" } : undefined,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
