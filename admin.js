@@ -54,7 +54,7 @@ function init() {
   els.finishAreaBtn.addEventListener("click", finishArea);
   els.featureForm.addEventListener("submit", saveFeature);
   els.deleteFeatureBtn.addEventListener("click", deleteFeature);
-  loadAdmin();
+  loadAdmin().catch(showAdminLoadError);
 }
 
 async function login(event) {
@@ -72,10 +72,16 @@ async function login(event) {
     }
     els.adminPassword.value = "";
     els.loginStatus.textContent = "Admin laden...";
-    await loadAdmin();
+    window.location.reload();
   } catch (error) {
     els.loginStatus.textContent = error.message || "Inloggen bleef hangen";
   }
+}
+
+function showAdminLoadError(error) {
+  els.loginStatus.textContent = error.message || "Admin laden mislukt";
+  els.loginPanel.hidden = false;
+  els.workbench.hidden = true;
 }
 
 async function logout() {
