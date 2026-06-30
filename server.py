@@ -55,6 +55,7 @@ SEED_PATH = os.environ.get("SEED_PATH", str(ROOT / "seed" / "wilde-weide-2026.js
 FESTIVAL_ID = os.environ.get("FESTIVAL_ID", DEFAULT_FESTIVAL_ID)
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 SESSION_SECRET = os.environ.get("SESSION_SECRET")
+ADMIN_AUTH_DISABLED = os.environ.get("ADMIN_AUTH_DISABLED", "0").lower() in ("1", "true", "yes")
 
 
 class WildeWegwijzerHandler(SimpleHTTPRequestHandler):
@@ -104,7 +105,7 @@ class WildeWegwijzerHandler(SimpleHTTPRequestHandler):
                 return
 
             if len(parts) >= 2 and parts[0] == "api" and parts[1] == "admin":
-                if not self.is_admin():
+                if not ADMIN_AUTH_DISABLED and not self.is_admin():
                     self.send_json({"error": "Niet ingelogd"}, HTTPStatus.UNAUTHORIZED)
                     return
                 self.handle_admin_api(method, parts)
@@ -166,6 +167,12 @@ class WildeWegwijzerHandler(SimpleHTTPRequestHandler):
         query = parse_qs(parsed.query)
         redirect_to = safe_redirect(query.get("redirect", [""])[0])
         wants_redirect = bool(redirect_to)
+        if ADMIN_AUTH_DISABLED:
+            if wants_redirect:
+                self.redirect(redirect_to)
+            else:
+                self.send_json({"ok": True, "authDisabled": True})
+            return
         if not ADMIN_PASSWORD or not SESSION_SECRET:
             if wants_redirect:
                 self.redirect(f"{redirect_to}?login=config")
@@ -356,7 +363,9 @@ def main():
     ensure_database()
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8080"))
-    if not ADMIN_PASSWORD or not SESSION_SECRET:
+    if ADMIN_AUTH_DISABLED:
+        print("Admin auth disabled: /admin is open", flush=True)
+    elif not ADMIN_PASSWORD or not SESSION_SECRET:
         print("Admin disabled: set ADMIN_PASSWORD and SESSION_SECRET to enable /admin", flush=True)
     server = ThreadingHTTPServer((host, port), WildeWegwijzerHandler)
     print(f"Wilde Wegwijzer serving on http://{host}:{port}", flush=True)
