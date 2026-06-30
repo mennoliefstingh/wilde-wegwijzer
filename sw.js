@@ -1,13 +1,11 @@
-const CACHE_NAME = "wilde-wegwijzer-pwa-20260630-basic-auth-1";
+const CACHE_NAME = "wilde-wegwijzer-pwa-20260701-admin-bypass-1";
 
 const PRECACHE_URLS = [
   "/",
   "/index.html",
-  "/admin.html",
   "/manifest.webmanifest",
   "/styles.css?v=public-pin-style-20260630",
   "/app.js?v=public-pin-style-20260630",
-  "/admin.js?v=basic-auth-20260630",
   "/vendor/leaflet/leaflet.css?v=1.9.4",
   "/vendor/leaflet/leaflet.js?v=1.9.4",
   "/api/bootstrap",
@@ -44,6 +42,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (url.pathname === "/admin" || url.pathname.startsWith("/admin/") || url.pathname.startsWith("/api/admin")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

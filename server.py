@@ -309,6 +309,8 @@ def safe_redirect(value):
 
 
 def cache_control_for(relative):
+    if relative in ("admin.html", "admin.js"):
+        return "no-store"
     if relative == "sw.js":
         return "no-cache"
     if relative.startswith(("assets/", "icons/")):

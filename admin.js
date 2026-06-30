@@ -45,6 +45,13 @@ const state = {
 init();
 
 function init() {
+  const missing = Object.entries(els)
+    .filter(([, element]) => !element)
+    .map(([name]) => name);
+  if (missing.length) {
+    showFatalAdminError(`Admin HTML mist onderdelen: ${missing.join(", ")}`);
+    return;
+  }
   els.logoutBtn.addEventListener("click", () => window.location.assign("/"));
   els.newPointBtn.addEventListener("click", startNewPoint);
   els.newAreaBtn.addEventListener("click", startNewArea);
@@ -58,6 +65,18 @@ function showAdminLoadError(error) {
   els.loginStatus.textContent = error.message || "Admin laden mislukt";
   els.loginPanel.hidden = false;
   els.workbench.hidden = true;
+}
+
+function showFatalAdminError(message) {
+  const fallback = document.createElement("main");
+  fallback.className = "admin-login";
+  fallback.innerHTML = `
+    <h1>Wilde Wegwijzer Admin</h1>
+    <div class="admin-form">
+      <p class="admin-status">${escapeHtml(message)}</p>
+    </div>
+  `;
+  document.body.replaceChildren(fallback);
 }
 
 async function loadAdmin() {
@@ -95,6 +114,7 @@ async function loadAdmin() {
 }
 
 function initMap() {
+  if (!Leaflet) throw new Error("Leaflet is niet geladen");
   if (state.map) {
     state.map.invalidateSize();
     return;
