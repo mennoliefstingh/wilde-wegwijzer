@@ -25,6 +25,8 @@ const els = {
   isDim: document.querySelector("#isDim"),
   deleteFeatureBtn: document.querySelector("#deleteFeatureBtn"),
   featureList: document.querySelector("#featureList"),
+  publicPinStatus: document.querySelector("#publicPinStatus"),
+  deleteSelectedPublicPinBtn: document.querySelector("#deleteSelectedPublicPinBtn"),
   publicPinList: document.querySelector("#publicPinList"),
 };
 
@@ -40,6 +42,7 @@ const state = {
   drawMode: null,
   draftPoints: [],
   selectedFeatureId: null,
+  selectedPublicPinId: null,
 };
 
 init();
@@ -58,6 +61,9 @@ function init() {
   els.finishAreaBtn.addEventListener("click", finishArea);
   els.featureForm.addEventListener("submit", saveFeature);
   els.deleteFeatureBtn.addEventListener("click", deleteFeature);
+  els.deleteSelectedPublicPinBtn.addEventListener("click", () => {
+    if (state.selectedPublicPinId) deletePublicPin(state.selectedPublicPinId);
+  });
   loadAdmin().catch(showAdminLoadError);
 }
 
@@ -201,15 +207,24 @@ function renderFeatureList() {
 
 function renderPublicPinList() {
   els.publicPinList.innerHTML = "";
+  els.deleteSelectedPublicPinBtn.hidden = !state.selectedPublicPinId;
   if (!state.publicPins.length) {
     els.publicPinList.textContent = "Nog geen publieke pins.";
+    els.publicPinStatus.textContent = "";
     return;
   }
   for (const pin of state.publicPins) {
     const row = document.createElement("div");
-    row.className = "admin-pin-row";
-    row.innerHTML = `<span>${escapeHtml(pin.label || "Publieke pin")}</span><button type="button">Verwijder</button>`;
-    row.querySelector("button").addEventListener("click", () => deletePublicPin(pin.id));
+    row.className = `admin-pin-row${pin.id === state.selectedPublicPinId ? " is-active" : ""}`;
+    row.innerHTML = `
+      <button class="admin-pin-select" type="button">
+        <strong>${escapeHtml(pin.label || "Publieke pin")}</strong>
+        <span>${Math.round(Number(pin.x))}, ${Math.round(Number(pin.y))}${pin.isVisible ? "" : " · verborgen"}</span>
+      </button>
+      <button class="admin-danger-btn" type="button">Verwijder</button>
+    `;
+    row.querySelector(".admin-pin-select").addEventListener("click", () => selectPublicPin(pin.id));
+    row.querySelector(".admin-danger-btn").addEventListener("click", () => deletePublicPin(pin.id));
     els.publicPinList.append(row);
   }
 }
@@ -218,6 +233,7 @@ function selectFeature(id) {
   const feature = state.features.find((item) => item.id === id);
   if (!feature) return;
   state.selectedFeatureId = id;
+  state.selectedPublicPinId = null;
   state.drawMode = null;
   state.draftPoints = [];
   els.featureId.value = feature.id;
@@ -241,7 +257,12 @@ function selectFeature(id) {
 function selectPublicPin(id) {
   const pin = state.publicPins.find((item) => item.id === id);
   if (!pin) return;
+  state.selectedFeatureId = null;
+  state.selectedPublicPinId = id;
   els.drawHint.textContent = `Publieke pin: ${pin.label || "zonder tekst"} (${Math.round(pin.x)}, ${Math.round(pin.y)})`;
+  els.publicPinStatus.textContent = `Geselecteerd: ${pin.label || "Publieke pin"}`;
+  renderFeatureList();
+  renderPublicPinList();
 }
 
 function startNewPoint() {
@@ -352,9 +373,17 @@ async function deleteFeature() {
 }
 
 async function deletePublicPin(id) {
+  const pin = state.publicPins.find((item) => item.id === id);
+  const label = pin?.label || "Publieke pin";
+  els.publicPinStatus.textContent = `${label} verwijderen...`;
   const response = await api(`/api/admin/public-pins/${encodeURIComponent(id)}`, { method: "DELETE", allowError: true });
-  if (!response.ok) return;
+  if (!response.ok || response.data?.ok === false) {
+    els.publicPinStatus.textContent = response.data?.error || `${label} verwijderen mislukt`;
+    return;
+  }
   state.publicPins = state.publicPins.filter((pin) => pin.id !== id);
+  if (state.selectedPublicPinId === id) state.selectedPublicPinId = null;
+  els.publicPinStatus.textContent = `${label} verwijderd.`;
   renderAll();
 }
 

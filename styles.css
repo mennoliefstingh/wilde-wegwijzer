@@ -1128,7 +1128,8 @@ button {
 
 .admin-list-item strong,
 .admin-list-item span,
-.admin-pin-row span {
+.admin-pin-select strong,
+.admin-pin-select span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1144,12 +1145,33 @@ button {
   background: var(--lila);
 }
 
-.admin-pin-row button {
+.admin-pin-row.is-active {
+  background: var(--rose);
+}
+
+.admin-pin-select {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: var(--black);
+  background: transparent;
+  text-align: left;
+}
+
+.admin-pin-select span {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.admin-danger-btn,
+.admin-pin-row button.admin-danger-btn {
   padding: 5px 8px;
   border: 3px solid var(--black);
   border-radius: 999px;
-  color: var(--black);
-  background: var(--paper);
+  color: var(--white);
+  background: var(--black);
   font-weight: 900;
 }
 
