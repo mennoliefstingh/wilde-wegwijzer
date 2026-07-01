@@ -37,6 +37,7 @@ body {
 }
 
 button {
+  appearance: none;
   font: inherit;
   cursor: pointer;
 }
@@ -1053,7 +1054,12 @@ button {
 .admin-panel h2 {
   font-size: 12px;
   font-weight: 900;
+  line-height: 1;
   text-transform: uppercase;
+}
+
+.admin-panel h2 {
+  margin: 0;
 }
 
 .admin-form input,
@@ -1100,10 +1106,22 @@ button {
   font-weight: 900;
 }
 
+.admin-section {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
 .admin-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   min-height: 20px;
+  width: 100%;
+  min-width: 0;
   font-size: 13px;
   font-weight: 900;
 }
@@ -1114,6 +1132,9 @@ button {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
   padding: 8px;
   border: 3px solid var(--black);
   border-radius: var(--radius);
@@ -1147,6 +1168,15 @@ button {
 
 .admin-pin-row.is-active {
   background: var(--rose);
+}
+
+.admin-empty-state {
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  border: 3px solid var(--black);
+  border-radius: var(--radius);
+  background: var(--white);
 }
 
 .admin-pin-select {

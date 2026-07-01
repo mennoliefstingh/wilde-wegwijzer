@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex" />
     <title>Wilde Wegwijzer Admin</title>
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="styles.css?v=admin-public-pins-20260701" />
+    <link rel="stylesheet" href="styles.css?v=admin-sections-20260701" />
   </head>
   <body class="admin-body">
     <main class="admin-shell">
@@ -104,19 +104,23 @@
             </div>
           </form>
 
-          <h2>Kaartobjecten</h2>
-          <div id="featureList" class="admin-list"></div>
+          <section class="admin-section">
+            <h2>Publieke pins</h2>
+            <p id="publicPinStatus" class="admin-hint"></p>
+            <button id="deleteSelectedPublicPinBtn" class="ww-btn" type="button" hidden>Verwijder geselecteerde publieke pin</button>
+            <div id="publicPinList" class="admin-list"></div>
+          </section>
 
-          <h2>Publieke pins</h2>
-          <p id="publicPinStatus" class="admin-hint"></p>
-          <button id="deleteSelectedPublicPinBtn" class="ww-btn" type="button" hidden>Verwijder geselecteerde publieke pin</button>
-          <div id="publicPinList" class="admin-list"></div>
+          <section class="admin-section">
+            <h2>Kaartobjecten</h2>
+            <div id="featureList" class="admin-list"></div>
+          </section>
         </aside>
         <section id="adminMap" class="admin-map" aria-label="Admin kaart"></section>
       </section>
     </main>
 
     <script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
-    <script src="admin.js?v=admin-public-pins-20260701" type="module"></script>
+    <script src="admin.js?v=admin-sections-20260701" type="module"></script>
   </body>
 </html>

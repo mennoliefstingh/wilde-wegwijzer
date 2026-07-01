@@ -209,7 +209,7 @@ function renderPublicPinList() {
   els.publicPinList.innerHTML = "";
   els.deleteSelectedPublicPinBtn.hidden = !state.selectedPublicPinId;
   if (!state.publicPins.length) {
-    els.publicPinList.textContent = "Nog geen publieke pins.";
+    els.publicPinList.innerHTML = `<p class="admin-empty-state">Nog geen publieke pins.</p>`;
     els.publicPinStatus.textContent = "";
     return;
   }
