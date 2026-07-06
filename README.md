@@ -31,6 +31,7 @@ De live SQLite database wordt niet committed. De reproduceerbare startdata staat
 
 ```sh
 seed/wilde-weide-2026.json
+seed/wildeburg-2026.json
 ```
 
 Een verse database expliciet opbouwen:
@@ -40,6 +41,12 @@ python3 tools/seed_db.py --db ./data/wildewegwijzer.sqlite --seed seed/wilde-wei
 ```
 
 Voor een nieuwe festivalvariant, zoals Wildeburg, maak je een nieuwe seedfile met een eigen `festival.id` en start je een database met die seed. De live DB blijft daarna de stateful bron.
+
+De Wildeburg-variant gebruikt dezelfde terreinkaart en startdata:
+
+```sh
+python3 tools/seed_db.py --db ./data/wildeburg.sqlite --seed seed/wildeburg-2026.json --reset
+```
 
 ## Docker
 
