@@ -109,6 +109,7 @@ async function loadAdmin() {
     return;
   }
 
+  applyFestivalTheme(bootstrap.data.festival);
   state.metadata = bootstrap.data.metadata;
   state.features = featuresResponse.data.features || [];
   state.publicPins = pinsResponse.data?.pins || [];
@@ -439,9 +440,20 @@ function featureCenter(feature) {
 
 function colorForFeature(feature) {
   if (feature.isDim || feature.mapKind === "dim") return "#050505";
-  if (feature.styleCategory === "camping" || feature.styleCategory === "wildlive") return "#ddacc0";
-  if (feature.styleCategory === "stage") return "#ddacc0";
-  return "#a3c2cf";
+  if (feature.styleCategory === "camping" || feature.mapKind === "camping") return cssColor("--camping-color", "#ddacc0");
+  if (feature.styleCategory === "wildlive" || feature.styleCategory === "stage" || feature.mapKind === "stage") return cssColor("--program-color", "#ddacc0");
+  if (feature.mapKind === "info") return cssColor("--info-color", "#a3c2cf");
+  return cssColor("--transport-color", "#a3c2cf");
+}
+
+function applyFestivalTheme(festival) {
+  const id = String(festival?.id || "");
+  document.documentElement.dataset.festival = id;
+  document.body.classList.toggle("theme-wildeburg", id.startsWith("wildeburg"));
+}
+
+function cssColor(name, fallback) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
 }
 
 function pixelLatLng(point) {

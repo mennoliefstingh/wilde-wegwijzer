@@ -8,9 +8,31 @@
   --veld: #7fa05a;
   --rose: #ddacc0;
   --water: #a3c2cf;
+  --program-color: #ddacc0;
+  --camping-color: #ddacc0;
+  --transport-color: #a3c2cf;
+  --info-color: #a3c2cf;
+  --public-pin-color: #ddacc0;
+  --shared-pin-color: #c59d4e;
+  --area-label-tab-color: #a48dbe;
   --shadow: 4px 4px 0 0 var(--black);
   --radius: 0.6rem;
   font-family: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.theme-wildeburg {
+  --lila: #a2afc1;
+  --oker: #cdb49b;
+  --veld: #b9c7aa;
+  --rose: #d6b2a3;
+  --water: #cdb49b;
+  --program-color: #d6b2a3;
+  --camping-color: #b9c7aa;
+  --transport-color: #cdb49b;
+  --info-color: #a2afc1;
+  --public-pin-color: #d6b2a3;
+  --shared-pin-color: #cdb49b;
+  --area-label-tab-color: #a2afc1;
 }
 
 * {
@@ -144,7 +166,7 @@ button {
   border-bottom: 0;
   border-radius: var(--radius) var(--radius) 0 0;
   color: var(--black);
-  background: var(--lila);
+  background: var(--area-label-tab-color);
   font-size: 11px;
   font-weight: 900;
   line-height: 1;
@@ -170,6 +192,36 @@ button {
 .area-label.is-active .area-label-body,
 .area-label.is-active .area-label-tab {
   background: var(--lila);
+}
+
+.area-label.is-stage .area-label-tab,
+.area-label.is-wildlive .area-label-tab,
+.area-label.is-active.is-stage .area-label-body,
+.area-label.is-active.is-stage .area-label-tab,
+.area-label.is-active.is-wildlive .area-label-body,
+.area-label.is-active.is-wildlive .area-label-tab {
+  background: var(--program-color);
+}
+
+.area-label.is-camping .area-label-tab,
+.area-label.is-active.is-camping .area-label-body,
+.area-label.is-active.is-camping .area-label-tab {
+  background: var(--camping-color);
+}
+
+.area-label.is-facility .area-label-tab,
+.area-label.is-side .area-label-tab,
+.area-label.is-active.is-facility .area-label-body,
+.area-label.is-active.is-facility .area-label-tab,
+.area-label.is-active.is-side .area-label-body,
+.area-label.is-active.is-side .area-label-tab {
+  background: var(--transport-color);
+}
+
+.area-label.is-info .area-label-tab,
+.area-label.is-active.is-info .area-label-body,
+.area-label.is-active.is-info .area-label-tab {
+  background: var(--info-color);
 }
 
 .area-label.is-active .area-label-body {
@@ -199,7 +251,7 @@ button {
   border: 3px solid var(--black);
   border-radius: 999px;
   color: var(--black);
-  background: var(--rose);
+  background: var(--program-color);
   box-shadow: var(--shadow);
   transform: translate(-50%, -50%);
 }
@@ -225,7 +277,7 @@ button {
   border: 3px solid var(--black);
   border-radius: 999px;
   color: var(--black);
-  background: var(--water);
+  background: var(--transport-color);
   box-shadow: var(--shadow);
   font-size: 13px;
   font-weight: 900;
@@ -247,7 +299,7 @@ button {
   border: 3px solid var(--black);
   border-radius: var(--radius);
   color: var(--black);
-  background: var(--water);
+  background: var(--transport-color);
   box-shadow: 3px 3px 0 0 var(--black);
   font-size: 12px;
   font-weight: 900;
@@ -263,6 +315,30 @@ button {
 
 .poi-label.is-wide {
   max-width: 224px;
+}
+
+.poi-marker.is-stage,
+.poi-marker.is-wildlive,
+.poi-label.is-stage,
+.poi-label.is-wildlive {
+  background: var(--program-color);
+}
+
+.poi-marker.is-camping,
+.poi-label.is-camping {
+  background: var(--camping-color);
+}
+
+.poi-marker.is-facility,
+.poi-marker.is-side,
+.poi-label.is-facility,
+.poi-label.is-side {
+  background: var(--transport-color);
+}
+
+.poi-marker.is-info,
+.poi-label.is-info {
+  background: var(--info-color);
 }
 
 .ww-div-icon.is-expanded .poi-label {
@@ -343,7 +419,7 @@ button {
   height: 30px;
   border: 3px solid var(--black);
   border-radius: 999px;
-  background: var(--oker);
+  background: var(--shared-pin-color);
   box-shadow: var(--shadow);
   font-size: 16px;
   line-height: 1;
@@ -359,7 +435,7 @@ button {
   border: 3px solid var(--black);
   border-radius: 999px;
   color: var(--black);
-  background: var(--rose);
+  background: var(--public-pin-color);
   box-shadow: var(--shadow);
   font-size: 13px;
   font-weight: 900;
@@ -397,7 +473,7 @@ button {
   border: 3px solid var(--black);
   border-radius: var(--radius);
   color: var(--black);
-  background: var(--rose);
+  background: var(--public-pin-color);
   box-shadow: 3px 3px 0 0 var(--black);
   font-size: 12px;
   font-weight: 900;
@@ -1167,7 +1243,7 @@ button {
 }
 
 .admin-pin-row.is-active {
-  background: var(--rose);
+  background: var(--public-pin-color);
 }
 
 .admin-empty-state {
@@ -1242,7 +1318,7 @@ button {
   height: 28px;
   border: 3px solid var(--black);
   border-radius: 999px;
-  background: var(--veld);
+  background: var(--public-pin-color);
   box-shadow: var(--shadow);
 }
 

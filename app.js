@@ -81,6 +81,7 @@ async function init() {
 
   bindEvents();
   const bootstrap = await fetchJson("/api/bootstrap");
+  applyFestivalTheme(bootstrap.festival);
   const metadata = bootstrap.metadata || {};
   const stages = bootstrap.stages || { features: [] };
   const areas = bootstrap.areas || { features: [] };
@@ -618,7 +619,7 @@ function renderAreaPoi(area, layer, kind) {
   const marker = Leaflet.marker(pixelLatLng(center), {
     icon: divIcon(pointHtml({
       markerClass: `poi-marker is-${area.category} is-${kind}`,
-      labelClass: `poi-label${wide ? " is-wide" : ""}`,
+      labelClass: `poi-label is-${area.category} is-${kind}${wide ? " is-wide" : ""}`,
       icon: poiIcon(kind, label),
       label,
     })),
@@ -639,7 +640,7 @@ function renderAreaLabel(area, layer, kind) {
   const compact = compactLabel(labelText, 46);
   const html = area.dim
     ? `<span class="area-label is-dim-label">${escapeHtml(labelText)}</span>`
-    : `<button class="area-label" type="button" data-area-id="${escapeHtml(area.id)}">
+    : `<button class="area-label is-${kind} is-${area.category}" type="button" data-area-id="${escapeHtml(area.id)}">
         <span class="area-label-tab">Gebied</span>
         <span class="area-label-body">${escapeHtml(compact)}</span>
       </button>`;
@@ -1076,9 +1077,22 @@ function poiIcon(kind, label) {
 
 function areaFill(area) {
   if (area.dim) return "#050505";
-  if (area.category === "camping" || area.category === "wildlive") return "#ddacc0";
-  if (area.category === "side") return "#a3c2cf";
-  return "#fff8df";
+  const kind = areaKind(area);
+  if (area.category === "camping" || kind === "camping") return cssColor("--camping-color", "#ddacc0");
+  if (area.category === "wildlive" || area.category === "stage" || kind === "stage") return cssColor("--program-color", "#ddacc0");
+  if (kind === "info") return cssColor("--info-color", "#a3c2cf");
+  if (area.category === "side" || kind === "facility") return cssColor("--transport-color", "#a3c2cf");
+  return cssColor("--paper", "#fff8df");
+}
+
+function applyFestivalTheme(festival) {
+  const id = String(festival?.id || "");
+  document.documentElement.dataset.festival = id;
+  document.body.classList.toggle("theme-wildeburg", id.startsWith("wildeburg"));
+}
+
+function cssColor(name, fallback) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
 }
 
 function areaCategory(title, text) {
